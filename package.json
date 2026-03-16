@@ -15,6 +15,7 @@
     "db:push": "drizzle-kit push",
     "db:seed": "tsx scripts/db-seed.ts",
     "db:create": "tsx scripts/create-db.ts",
+    "db:ensure-currency-code": "tsx scripts/ensure-currency-code.ts",
     "db:studio": "drizzle-kit studio"
   },
   "devDependencies": {

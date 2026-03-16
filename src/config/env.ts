@@ -43,4 +43,9 @@ export const env = {
   get isDev(): boolean {
     return this.nodeEnv === "development";
   },
+
+  /** Autenticação por conta (Google Ads): quando true, o botão "Conectar nova conta" fica ativo. */
+  get googleAdsConnectEnabled(): boolean {
+    return getEnvOptional("GOOGLE_ADS_CONNECT_ENABLED") === "true";
+  },
 } as const;

@@ -134,6 +134,8 @@ Redis **não** é importado no startup da aplicação; só é usado quando algum
 
 Para testes que envolvam apenas login, dashboard e admin, **Redis pode ficar em branco**.
 
+**Observabilidade (Admin):** a página **Admin > Observabilidade** abre mesmo sem `REDIS_URL`. Sem Redis configurado, os indicadores de Redis, worker e filas aparecem como indisponíveis (erro / missing / profundidade 0). Para ver filas e heartbeat do worker, configure `REDIS_URL`.
+
 ---
 
 ## Outras variáveis (opcionais para testes iniciais)
@@ -166,6 +168,52 @@ Para desenvolver novas telas, componentes ou alterar o front, use o **documento 
 - Referências (design-system, patterns, code-and-implementation).
 
 O Design System está em [docs/design-system/](design-system/); o mapeamento código ↔ doc em [docs/design-system/code-and-implementation.md](design-system/code-and-implementation.md).
+
+---
+
+## Solução de problemas
+
+### Erro: "não existe a relação uazapi_instances" (sessão super admin)
+
+**Sintoma:** Ao acessar Admin (super admin), a tela quebra com `PostgresError: relation "uazapi_instances" does not exist`.
+
+**Causa:** A tabela `uazapi_instances` é criada pela migration `0003_hardening_integrations.sql`. Se as migrations não foram aplicadas até essa versão (banco novo só com 0000, ou migrations rodadas antes de 0003 existir), a tabela não existe e a página Admin > Integrações falha ao carregar estatísticas e listagens (Typebot, Evolution, **UAZAPI**, Google Ads).
+
+**Solução:** Aplicar todas as migrations no banco em uso:
+
+```bash
+npm run db:migrate
+```
+
+Confirme que `DATABASE_URL` no `.env` aponta para o mesmo banco que a aplicação usa. Após a execução, a tabela `uazapi_instances` e os índices/constraints da 0003 estarão criados; recarregue a página do admin.
+
+**Referência:** Schema em `src/db/schema/integrations/uazapi-instances.ts`; migration em `src/db/migrations/0003_hardening_integrations.sql`; uso em `src/server/admin/integrations-stats.ts` e página `src/app/(admin)/admin/integrations/page.tsx`. Documentação de credenciais: [CONFIG_CREDENTIALS.md](CONFIG_CREDENTIALS.md).
+
+### Erro: "não existe a coluna currency_code" (Google Ads / dashboard)
+
+**Sintoma:** Ao acessar a área Google Ads no dashboard (ou listagem de contas/snapshots), a tela quebra com `PostgresError: column "currency_code" does not exist`.
+
+**Causa:** A coluna `currency_code` na tabela `google_ads_accounts` é criada pela migration `0001_google_ads_currency_code.sql`. Essa migration não estava listada no journal do Drizzle (`src/db/migrations/meta/_journal.json`), então `npm run db:migrate` não a aplicava.
+
+**Solução (escolha uma):**
+
+1. **Rodar todas as migrations:** `npm run db:migrate` (a 0001 adiciona a coluna).
+2. **Se o erro persistir** (ex.: migration já marcada como aplicada mas coluna ausente), rode o script que aplica só essa coluna: `npm run db:ensure-currency-code`. Ele executa `ALTER TABLE google_ads_accounts ADD COLUMN IF NOT EXISTS currency_code varchar(8)` usando o `DATABASE_URL` do `.env`.
+
+Recarregue a página do Google Ads no dashboard após aplicar.
+
+---
+
+### Erro: "REDIS_URL não definida" na página Observabilidade
+
+**Sintoma:** Ao abrir Admin > Observabilidade, a página quebra com `REDIS_URL não definida. Configure em .env.local`.
+
+**Causa:** A observabilidade consulta Redis para métricas de filas e heartbeat do worker. O código antigo lançava erro ao não encontrar `REDIS_URL`.
+
+**Solução (escolha uma):**
+
+1. **Configurar Redis:** Defina `REDIS_URL` no `.env` ou `.env.local` (ex.: `redis://localhost:6379`) para ver filas e status do worker na página.
+2. **Usar sem Redis:** Na versão atual, a página de Observabilidade **abre mesmo sem REDIS_URL**: Redis, worker e filas aparecem como indisponíveis; o restante (DB, integrações, erros recentes) é exibido normalmente. Atualize o código se ainda vir o erro.
 
 ---
 

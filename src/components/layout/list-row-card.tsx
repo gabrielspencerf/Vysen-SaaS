@@ -24,7 +24,7 @@ export function ListRowCard({
   const Comp = Component;
   return (
     <Comp
-      className={`flex flex-wrap items-center justify-between rounded-2xl px-4 py-4 transition-shadow hover:shadow-md sm:px-6 ${gradientByVariant[variant]} ${className}`}
+      className={`panel-lux flex flex-wrap items-center justify-between rounded-2xl px-4 py-4 transition-shadow hover:shadow-md sm:px-6 ${gradientByVariant[variant]} ${className}`}
     >
       {children}
     </Comp>

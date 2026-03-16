@@ -35,7 +35,7 @@ export default async function DashboardConversationDetailPage({
   );
 
   return (
-    <div className="flex h-[calc(100vh-2rem)] flex-col bg-[#efeae2] dark:bg-[#0b141a] rounded-2xl overflow-hidden border border-brand-border mt-4 mx-4">
+    <div className="panel-lux flex h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-2xl border border-brand-border">
       {/* Header */}
       <header className="flex items-center gap-4 bg-[#f0f2f5] dark:bg-[#202c33] px-4 py-3 border-b border-brand-border">
         <Link

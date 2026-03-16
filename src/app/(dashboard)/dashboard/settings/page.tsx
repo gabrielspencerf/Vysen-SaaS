@@ -17,6 +17,17 @@ export default function DashboardSettingsPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfilePayload | null>(null);
   const [name, setName] = useState("");
+  const [themeMode, setThemeMode] = useState<"dark" | "light">("dark");
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("ds-theme");
+      const nextTheme = stored === "light" ? "light" : "dark";
+      setThemeMode(nextTheme);
+    } catch {
+      setThemeMode("dark");
+    }
+  }, []);
 
   useEffect(() => {
     fetch("/api/context/profile")
@@ -58,12 +69,57 @@ export default function DashboardSettingsPage() {
     }
   }
 
+  function applyTheme(nextTheme: "dark" | "light") {
+    setThemeMode(nextTheme);
+    document.documentElement.classList.toggle("dark", nextTheme === "dark");
+    document.documentElement.classList.toggle("light", nextTheme === "light");
+    document.documentElement.setAttribute("data-theme", nextTheme);
+    try {
+      localStorage.setItem("ds-theme", nextTheme);
+    } catch {}
+  }
+
   return (
-    <PageSection>
+    <PageSection variant="plain" className="px-1 py-0 sm:px-2 md:px-2 md:pt-0 md:pb-0">
       <h1 className="text-2xl font-semibold text-brand-text">Configurações</h1>
       <p className="mt-1 text-sm text-brand-muted">
         Atualize os dados básicos do seu perfil de acesso.
       </p>
+
+      <Card className="mt-6 border-brand-border bg-brand-surface">
+        <CardContent className="p-6">
+          <h2 className="text-base font-semibold text-brand-text">Aparência</h2>
+          <p className="mt-1 text-sm text-brand-muted">
+            Escolha o tema visual da interface.
+          </p>
+          <div className="mt-4 inline-flex items-center gap-1 rounded-lg border border-brand-border bg-brand-surface/60 p-1">
+            <button
+              type="button"
+              onClick={() => applyTheme("dark")}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                themeMode === "dark"
+                  ? "nav-active-neon"
+                  : "text-brand-muted hover:text-brand-text"
+              }`}
+              aria-pressed={themeMode === "dark"}
+            >
+              Escuro
+            </button>
+            <button
+              type="button"
+              onClick={() => applyTheme("light")}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                themeMode === "light"
+                  ? "nav-active-neon"
+                  : "text-brand-muted hover:text-brand-text"
+              }`}
+              aria-pressed={themeMode === "light"}
+            >
+              Claro
+            </button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="mt-6 border-brand-border bg-brand-surface">
         <CardContent className="p-6">

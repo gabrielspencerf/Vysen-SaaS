@@ -12,12 +12,19 @@
     {
       "idx": 1,
       "version": "7",
+      "when": 1731023900000,
+      "tag": "0001_google_ads_currency_code",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
       "when": 1731024000000,
       "tag": "0002_app_global_config",
       "breakpoints": true
     },
     {
-      "idx": 2,
+      "idx": 3,
       "version": "7",
       "when": 1772932370352,
       "tag": "0003_hardening_integrations",

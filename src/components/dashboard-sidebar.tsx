@@ -40,28 +40,32 @@ export function DashboardSidebar({
   const pathname = usePathname();
 
   return (
-    <aside className="sidebar flex h-full flex-col scroll-hide overflow-y-auto overflow-x-hidden border-r border-brand-border bg-brand-surface">
+    <aside className="sidebar flex h-full flex-col scroll-hide overflow-y-auto overflow-x-hidden border-r border-brand-border">
       <div className="flex flex-1 flex-col">
         {/* Logo + cabeçalho da conta */}
         <div className="border-b border-brand-border p-4">
           <div className="mb-4 flex items-center gap-2">
-            <img
-              src="/logo.svg"
-              alt="Creative Lane"
-              width={24}
-              height={24}
-              className="logo-adaptive h-6 w-6 shrink-0 text-brand-text"
-            />
+            <div className="brand-logo-avatar shrink-0">
+              <img
+                src="/logo.svg"
+                alt="Creative Lane"
+                width={18}
+                height={18}
+                className="logo-adaptive h-[18px] w-[18px] shrink-0 text-brand-text"
+              />
+            </div>
             <span className="text-sm font-semibold text-brand-text">
               Creative Lane
             </span>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-brand-muted uppercase tracking-wider">Dashboard</span>
+            <span className="pl-2 text-xs font-medium uppercase tracking-wider text-brand-muted">
+              Dashboard
+            </span>
             <TenantSwitcher
               currentTenantId={session.session.currentTenantId!}
               currentTenantName={currentMembership.tenantName}
-              roleSlug={currentMembership.roleSlug}
+              currentUserName={session.user.name?.trim() || session.user.email}
             />
           </div>
         </div>
@@ -75,10 +79,10 @@ export function DashboardSidebar({
               <Link
                 key={href}
                 href={href}
-                className={`mx-2 flex items-center gap-3 rounded-lg px-4 py-3 transition-colors ${
+                className={`sidebar-nav-item mx-2 flex items-center gap-3 px-4 py-3 ${
                   isActive
-                    ? "bg-brand-neon text-[rgb(0,20,10)] font-medium shadow-[0_2px_10px_-3px_rgba(var(--color-brand-neon),0.4)]"
-                    : "text-brand-muted hover:bg-brand-surface hover:text-brand-text"
+                    ? "sidebar-nav-item-active"
+                    : ""
                 }`}
               >
                 <Icon className="h-5 w-5 shrink-0" aria-hidden />

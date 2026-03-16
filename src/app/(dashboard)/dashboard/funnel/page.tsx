@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { Filter } from "lucide-react";
 import {
   getDashboardTenantContext,
   getFunnelOverviewForTenant,
 } from "@/server/dashboard";
 import { PageSection } from "@/components/layout";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const PERIOD_OPTIONS = [
   { value: "", label: "Todos os leads" },
@@ -43,17 +45,18 @@ export default async function DashboardFunnelPage({
   });
 
   return (
-    <PageSection>
-      <h1 className="text-xl font-semibold text-neutral-900">Funil</h1>
-      <p className="mt-2 text-neutral-600">
+    <PageSection variant="plain" className="px-1 py-0 sm:px-2 md:px-2 md:pt-0 md:pb-0">
+      <span className="section-eyebrow">análise de pipeline</span>
+      <h1 className="text-2xl font-bold text-brand-text">Funil</h1>
+      <p className="mt-2 text-brand-muted">
         Volume por etapa, conversão e progressão. Destaque para o possível
         gargalo entre etapas.
       </p>
 
       {/* Filtro de período: leads com first_seen_at no período */}
       <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-neutral-600">Período (primeiro contato):</span>
-        <nav className="flex flex-wrap gap-1">
+        <span className="text-brand-muted">Período (primeiro contato):</span>
+        <nav className="flex flex-wrap gap-1" aria-label="Filtrar por período">
           {PERIOD_OPTIONS.map((opt) => (
             <Link
               key={opt.value || "all"}
@@ -62,10 +65,10 @@ export default async function DashboardFunnelPage({
                   ? "/dashboard/funnel"
                   : `/dashboard/funnel?period=${opt.value}`
               }
-              className={`rounded px-2 py-1 ${
+              className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                 (periodParam || "") === opt.value
-                  ? "bg-neutral-800 text-white"
-                  : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+                  ? "nav-active-neon border-transparent"
+                  : "border-brand-border bg-brand-surface/50 text-brand-muted hover:bg-brand-surface hover:text-brand-text"
               }`}
             >
               {opt.label}
@@ -73,34 +76,45 @@ export default async function DashboardFunnelPage({
           ))}
         </nav>
         {periodDays != null && (
-          <span className="text-neutral-500">
+          <span className="text-brand-muted">
             (leads com primeiro contato nos últimos {periodDays} dias)
           </span>
         )}
       </div>
 
       {overview.length === 0 ? (
-        <div className="mt-6 rounded border border-neutral-200 bg-white p-6 text-center text-neutral-600">
-          Nenhum funil configurado para este tenant. Crie funis e etapas para
-          visualizar a progressão dos leads.
+        <div className="mt-6">
+          <EmptyState
+            title="Nenhum funil configurado para este tenant"
+            description="Funis e etapas são configurados no banco ou via integrações (ex.: Typebot com variáveis de etapa). Quando houver funil ativo e leads associados, a progressão aparecerá aqui."
+            icon={<Filter className="h-6 w-6" />}
+            action={
+              <Link
+                href="/dashboard/leads"
+                className="inline-flex items-center rounded-lg border border-brand-border bg-transparent px-4 py-2 text-xs font-medium uppercase tracking-wider text-brand-text transition-colors hover:bg-brand-surface"
+              >
+                ← Voltar para Leads
+              </Link>
+            }
+          />
         </div>
       ) : (
         <div className="mt-6 space-y-8">
           {overview.map((row) => (
             <section
               key={row.funnelId}
-              className="rounded border border-neutral-200 bg-white p-4"
+              className="panel-lux rounded-2xl border border-brand-border bg-brand-surface/50 p-4"
             >
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-base font-medium text-neutral-900">
-                  {row.funnelName}
-                  {!row.isActive && (
-                    <span className="ml-2 text-sm font-normal text-neutral-500">
-                      (inativo)
-                    </span>
-                  )}
-                </h2>
-                <span className="text-sm text-neutral-500">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-medium text-brand-text">
+                    {row.funnelName}
+                  </h2>
+                  <span className="dashboard-chip">
+                    {row.isActive ? "Ativo" : "Inativo"}
+                  </span>
+                </div>
+                <span className="dashboard-chip">
                   Total: {formatNumber(row.totalLeads)} leads
                 </span>
               </div>
@@ -113,30 +127,30 @@ export default async function DashboardFunnelPage({
                   return (
                     <div
                       key={step.stepId}
-                      className={`flex min-w-[7rem] flex-col rounded border px-3 py-2 ${
+                      className={`panel-mini flex min-w-[7rem] flex-col rounded-lg border px-3 py-2 ${
                         isBottleneck
-                          ? "border-amber-500 bg-amber-50 shadow-sm ring-1 ring-amber-200"
-                          : "border-neutral-200 bg-neutral-50"
+                          ? "border-amber-500 bg-amber-500/10 shadow-sm ring-1 ring-amber-500/30"
+                          : "border-brand-border bg-brand-surface/30"
                       }`}
                     >
                       {isBottleneck && (
-                        <span className="mb-0.5 text-xs font-medium text-amber-700">
+                        <span className="mb-0.5 text-xs font-medium text-amber-600">
                           Possível gargalo
                         </span>
                       )}
-                      <span className="text-xs font-medium text-neutral-600">
+                      <span className="text-xs font-medium text-brand-muted">
                         {step.stepName}
                       </span>
-                      <span className="text-lg font-semibold text-neutral-900">
+                      <span className="text-lg font-semibold text-brand-text">
                         {formatNumber(step.leadCount)}
                       </span>
                       {step.conversionFromPrevious != null && (
-                        <span className="text-xs text-neutral-600">
+                        <span className="text-xs text-brand-muted">
                           {formatPercent(step.conversionFromPrevious)} da anterior
                         </span>
                       )}
                       {row.totalLeads > 0 && (
-                        <span className="text-xs text-neutral-500">
+                        <span className="text-xs text-brand-muted">
                           {formatPercent(step.percentOfTotal)} do total
                         </span>
                       )}
@@ -144,15 +158,15 @@ export default async function DashboardFunnelPage({
                   );
                 })}
                 {row.unassignedCount > 0 && (
-                  <div className="flex min-w-[7rem] flex-col rounded border border-amber-200 bg-amber-50 px-3 py-2">
-                    <span className="text-xs font-medium text-amber-800">
+                  <div className="panel-mini flex min-w-[7rem] flex-col rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2">
+                    <span className="text-xs font-medium text-amber-600">
                       Sem etapa
                     </span>
-                    <span className="text-lg font-semibold text-amber-900">
+                    <span className="text-lg font-semibold text-brand-text">
                       {formatNumber(row.unassignedCount)}
                     </span>
                     {row.totalLeads > 0 && (
-                      <span className="text-xs text-amber-700">
+                      <span className="text-xs text-brand-muted">
                         {formatPercent(row.unassignedPercentOfTotal)} do total
                       </span>
                     )}
@@ -167,7 +181,7 @@ export default async function DashboardFunnelPage({
       <div className="mt-6">
         <Link
           href="/dashboard/leads"
-          className="text-sm text-neutral-600 hover:text-neutral-900"
+          className="text-sm text-brand-muted hover:text-brand-neon transition-colors"
         >
           ← Voltar para Leads
         </Link>

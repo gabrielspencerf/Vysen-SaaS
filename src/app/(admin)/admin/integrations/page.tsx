@@ -29,24 +29,24 @@ export default async function AdminIntegrationsPage() {
       {/* Ações: Conectar Typebot / Conectar Evolution */}
       <div className="mt-6 flex flex-wrap gap-3">
         <Link href="/admin/integrations/typebot/new">
-          <Button variant="cta" className="gap-2">
+          <Button variant="secondary" className="gap-2 border-brand-border bg-brand-surface text-brand-text hover:border-brand-neon/40 hover:text-brand-neon">
             <Plus className="h-4 w-4" aria-hidden />
             Conectar Typebot
           </Button>
         </Link>
         <Link href="/admin/integrations/typebot/metrics">
-          <Button variant="secondary" className="gap-2">
+          <Button variant="secondary" className="gap-2 border-brand-border bg-brand-surface text-brand-text hover:border-brand-neon/40 hover:text-brand-neon">
             Sincronizar métricas Typebot
           </Button>
         </Link>
         <Link href="/admin/integrations/evolution/new">
-          <Button variant="cta" className="gap-2">
+          <Button variant="secondary" className="gap-2 border-brand-border bg-brand-surface text-brand-text hover:border-brand-neon/40 hover:text-brand-neon">
             <Plus className="h-4 w-4" aria-hidden />
             Conectar Evolution API
           </Button>
         </Link>
         <Link href="/admin/integrations/uazapi/new">
-          <Button variant="cta" className="gap-2">
+          <Button variant="secondary" className="gap-2 border-brand-border bg-brand-surface text-brand-text hover:border-brand-neon/40 hover:text-brand-neon">
             <Plus className="h-4 w-4" aria-hidden />
             Conectar UAZAPI
           </Button>

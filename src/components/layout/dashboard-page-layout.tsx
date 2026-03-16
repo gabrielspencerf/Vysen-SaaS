@@ -11,8 +11,10 @@ export function DashboardPageLayout({
   className?: string;
 }) {
   return (
-    <div className={`min-h-full bg-brand-dark px-4 py-8 sm:px-6 lg:px-8 ${className}`}>
-      <div className="mx-auto w-full max-w-[1200px] space-y-10">
+    <div
+      className={`dashboard-canvas min-h-full overflow-x-hidden bg-brand-dark px-4 py-8 sm:px-6 lg:px-8 ${className}`}
+    >
+      <div className="mx-auto w-full min-w-0 max-w-[1200px] space-y-10">
         {children}
       </div>
     </div>

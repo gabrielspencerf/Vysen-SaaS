@@ -64,6 +64,20 @@ export interface ObservabilitySnapshot {
 }
 
 async function getQueueMetrics() {
+  if (!process.env.REDIS_URL) {
+    return {
+      redisOk: false,
+      workerStatus: "missing" as const,
+      queue: {
+        typebotDepth: 0,
+        evolutionDepth: 0,
+        googleAdsDepth: 0,
+        typebotDlqDepth: 0,
+        evolutionDlqDepth: 0,
+        googleAdsDlqDepth: 0,
+      },
+    };
+  }
   const redis = createRedisClient();
   try {
     const [

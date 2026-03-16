@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 export default async function AdminTenantsPage() {
   const tenants = await listTenants();
   return (
-    <PageSection>
+    <PageSection variant="plain" className="px-1 py-0 sm:px-2 md:px-2 md:pt-0 md:pb-0">
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-brand-text">Tenants</h1>
         <Button asChild className="btn-cta-primary text-sm">

@@ -46,7 +46,7 @@ export default function HomePage() {
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center p-4 sm:p-8">
         
         {/* Container que imita o box do site com borda e fundo preenchido */}
-        <div className="group relative flex w-full max-w-5xl flex-col md:flex-row items-center justify-between animate-fade-in bg-[#0c100e]/80 backdrop-blur-xl border border-brand-border/40 rounded-3xl p-8 sm:p-12 md:p-16 gap-10 shadow-[0_0_40px_-10px_rgba(0,200,130,0.1)] hover:shadow-[0_0_60px_-15px_rgba(0,200,130,0.2)] hover:border-brand-neon/30 transition-all duration-700 overflow-hidden">
+        <div className="landing-hero-shell group relative flex w-full max-w-5xl flex-col items-center justify-between gap-10 overflow-hidden rounded-3xl border border-brand-border/40 p-8 backdrop-blur-xl transition-all duration-700 hover:border-brand-neon/30 md:flex-row sm:p-12 md:p-16 animate-fade-in">
           
           {/* Efeitos de luz interna no container */}
           <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-brand-neon/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
@@ -90,7 +90,7 @@ export default function HomePage() {
           </div>
 
           {/* Lado direito: Ilustração do painel simulado */}
-          <div className="relative z-10 flex-1 w-full max-w-md bg-[#131715] border border-brand-border/50 rounded-2xl p-4 shadow-2xl flex flex-col opacity-90 overflow-hidden group-hover:border-brand-neon/40 transition-colors duration-700">
+          <div className="landing-panel relative z-10 flex w-full max-w-md flex-1 flex-col overflow-hidden rounded-2xl border border-brand-border/50 p-4 opacity-90 transition-colors duration-700 group-hover:border-brand-neon/40">
             
             {/* Reflexo animado varrendo a tela */}
             <div className="absolute top-0 -left-[100%] w-[50%] h-full bg-gradient-to-r from-transparent via-brand-neon/5 to-transparent -skew-x-12 animate-[shimmer_3s_infinite_ease-in-out] pointer-events-none"></div>
@@ -139,7 +139,7 @@ export default function HomePage() {
               </div>
 
               {/* Tabela fake */}
-              <div className="mt-4 border border-brand-border/30 rounded-lg p-3 bg-[#0c100e]">
+              <div className="mt-4 rounded-lg border border-brand-border/30 bg-brand-dark/70 p-3">
                 <div className="flex justify-between items-center mb-3">
                   <div className="h-2 w-16 bg-brand-border/50 rounded"></div>
                   <div className="h-2 w-12 bg-brand-border/30 rounded"></div>

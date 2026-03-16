@@ -5,19 +5,19 @@ import { Activity, Database, Radio, Server, TriangleAlert } from "lucide-react";
 
 function statusBadge(status: string) {
   if (status === "ok" || status === "online") {
-    return "text-emerald-300";
+    return "text-emerald-600 dark:text-emerald-300";
   }
   if (status === "stale" || status.includes("http_")) {
-    return "text-amber-300";
+    return "text-amber-600 dark:text-amber-300";
   }
-  return "text-red-300";
+  return "text-red-600 dark:text-red-300";
 }
 
 export default async function AdminObservabilityPage() {
   const snapshot = await getObservabilitySnapshot();
 
   return (
-    <PageSection>
+    <PageSection variant="plain" className="px-1 py-0 sm:px-2 md:px-2 md:pt-0 md:pb-0">
       <h1 className="text-2xl font-bold text-brand-text mb-2">
         Observabilidade
       </h1>

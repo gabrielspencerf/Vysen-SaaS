@@ -13,13 +13,13 @@ interface TenantOption {
 interface TenantSwitcherProps {
   currentTenantId: string;
   currentTenantName: string;
-  roleSlug: string;
+  currentUserName: string;
 }
 
 export function TenantSwitcher({
   currentTenantId,
   currentTenantName,
-  roleSlug,
+  currentUserName,
 }: TenantSwitcherProps) {
   const router = useRouter();
   const [tenants, setTenants] = useState<TenantOption[]>([]);
@@ -61,14 +61,16 @@ export function TenantSwitcher({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 rounded border border-brand-border bg-brand-surface px-2 py-1.5 text-sm text-brand-text hover:bg-brand-surface"
+        className="flex w-full min-w-0 items-center justify-between gap-2 rounded border border-brand-border bg-brand-surface px-2 py-1.5 text-left text-sm text-brand-text hover:bg-brand-surface"
         aria-expanded={open}
         aria-haspopup="listbox"
       >
-        <span className="font-medium">{currentTenantName}</span>
-        <span className="text-brand-muted">· {roleSlug}</span>
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-semibold">{currentTenantName}</span>
+          <span className="block truncate text-xs text-brand-muted">{currentUserName}</span>
+        </span>
         {others.length > 0 && (
-          <span className="ml-1 text-brand-muted">▾</span>
+          <span className="shrink-0 text-brand-muted">▾</span>
         )}
       </button>
       {open && others.length > 0 && (

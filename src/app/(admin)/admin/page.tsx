@@ -27,7 +27,7 @@ const hubLinks = [
 
 export default function AdminPage() {
   return (
-    <PageSection>
+    <PageSection variant="plain" className="px-1 py-0 sm:px-2 md:px-2 md:pt-0 md:pb-0">
       <h1 className="text-2xl font-bold text-brand-text mb-2">
         Admin central
       </h1>

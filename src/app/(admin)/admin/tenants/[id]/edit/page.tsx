@@ -94,7 +94,7 @@ export default function EditTenantPage() {
   }
 
   return (
-    <PageSection>
+    <PageSection variant="plain" className="px-1 py-0 sm:px-2 md:px-2 md:pt-0 md:pb-0">
       <div className="mb-6">
         <Link
           href={`/admin/tenants/${id}`}

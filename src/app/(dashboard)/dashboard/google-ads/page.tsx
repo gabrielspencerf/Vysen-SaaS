@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui";
 import { BarChart3 } from "lucide-react";
 import { AdsSpendChart } from "@/components/dashboard-charts";
+import { env } from "@/config/env";
 
 const PAGE_SIZE = 50;
 
@@ -145,12 +146,25 @@ export default async function DashboardGoogleAdsPage({
 
   return (
     <div className="space-y-6">
-      <PageSection>
+      <PageSection variant="plain" className="px-1 py-0 sm:px-2 md:px-2 md:pt-0 md:pb-0">
+        <span className="section-eyebrow">aquisição paga</span>
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
           <h1 className="text-2xl font-bold text-brand-text">Google Ads</h1>
-          <Button asChild className="btn-cta-primary text-sm">
-            <a href="/api/google-ads/auth/start">Conectar nova conta</a>
-          </Button>
+          {env.googleAdsConnectEnabled ? (
+            <Link href="/api/google-ads/auth/start">
+              <Button className="btn-cta-primary text-sm">
+                Conectar nova conta
+              </Button>
+            </Link>
+          ) : (
+            <Button
+              disabled
+              className="btn-cta-primary text-sm opacity-60 cursor-not-allowed"
+              title="Autenticação por conta em breve"
+            >
+              Conectar nova conta (em breve)
+            </Button>
+          )}
         </div>
         <p className="text-sm text-brand-muted">
           Contas conectadas e métricas por campanha sincronizadas.
@@ -175,6 +189,7 @@ export default async function DashboardGoogleAdsPage({
 
       {/* Gráfico principal mock */}
       <PageSection>
+        <span className="section-eyebrow mb-2">visão consolidada</span>
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-brand-neon">
           Desempenho Geral
         </h2>
@@ -182,6 +197,7 @@ export default async function DashboardGoogleAdsPage({
       </PageSection>
 
       <PageSection>
+        <span className="section-eyebrow mb-2">integrações</span>
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-brand-neon">
           Contas Conectadas
         </h2>
@@ -226,6 +242,7 @@ export default async function DashboardGoogleAdsPage({
       </PageSection>
 
       <PageSection>
+        <span className="section-eyebrow mb-2">atribuição</span>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-neon mb-1">
@@ -235,14 +252,14 @@ export default async function DashboardGoogleAdsPage({
               Gasto, cliques e impressões e leads atribuídos no período. CPL = gasto ÷ total atribuído.
             </p>
           </div>
-          <div className="flex items-center gap-2 text-sm bg-brand-surface border border-brand-border p-1 rounded-lg">
+          <div className="panel-mini flex items-center gap-2 rounded-lg p-1 text-sm">
             {ATTRIBUTION_PERIOD_OPTIONS.map((days) => (
               <Link
                 key={days}
                 href={attributionPeriodUrl(days)}
                 className={`px-3 py-1.5 rounded-md transition-colors ${
                   attributionPeriodDays === days
-                    ? "bg-brand-text text-brand-dark font-medium"
+                    ? "nav-active-neon font-medium"
                     : "text-brand-muted hover:text-brand-text"
                 }`}
               >
@@ -256,7 +273,7 @@ export default async function DashboardGoogleAdsPage({
           attributionSummary.totalNameMatch > 0 ||
           attributionSummary.totalAmbiguous > 0 ||
           attributionSummary.totalUnmatched > 0) && (
-          <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-xl bg-brand-surface border border-brand-border">
+          <div className="panel-lux mb-6 grid grid-cols-2 gap-4 rounded-xl border border-brand-border bg-brand-surface p-4 md:grid-cols-4">
             <div className="flex flex-col">
               <span className="text-xs text-brand-muted">Exato (ID)</span>
               <span className="text-lg font-semibold text-brand-text">{attributionSummary.totalExactMatch.toLocaleString("pt-BR")}</span>
@@ -321,6 +338,7 @@ export default async function DashboardGoogleAdsPage({
       </PageSection>
 
       <PageSection>
+        <span className="section-eyebrow mb-2">exploração</span>
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-brand-neon">
           Métricas por campanha (snapshots)
         </h2>
@@ -328,7 +346,7 @@ export default async function DashboardGoogleAdsPage({
         <form
           method="GET"
           action="/dashboard/google-ads"
-          className="mb-6 flex flex-wrap items-end gap-4 p-4 rounded-xl border border-brand-border bg-brand-surface"
+          className="panel-lux mb-6 flex flex-wrap items-end gap-4 rounded-xl border border-brand-border bg-brand-surface p-4"
         >
           <input type="hidden" name="page" value="1" />
           <div className="flex-1 min-w-[200px]">
