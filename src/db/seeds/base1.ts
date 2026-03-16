@@ -18,6 +18,7 @@ import {
   integrations,
 } from "@/db/schema";
 import { hashWebhookSecret } from "@/server/integrations/webhook-secret";
+import { encryptSecret } from "@/server/security/secret-crypto";
 
 const ROLE_SLUGS = [
   { slug: "super_admin", name: "Super Admin", description: "Acesso total e admin central" },
@@ -173,6 +174,11 @@ export async function run(): Promise<void> {
       .limit(1);
     if (!existingBot) {
       const webhookSecret = process.env.SEED_TYPEBOT_WEBHOOK_SECRET?.trim();
+      const typebotApiToken = process.env.SEED_TYPEBOT_API_TOKEN?.trim();
+      const typebotMetricsApiBaseUrl =
+        process.env.SEED_TYPEBOT_METRICS_API_BASE_URL?.trim() ||
+        process.env.TYPEBOT_API_BASE_URL?.trim() ||
+        null;
       const [inserted] = await db
         .insert(typebotBots)
         .values({
@@ -181,6 +187,13 @@ export async function run(): Promise<void> {
           name: process.env.SEED_TYPEBOT_NAME?.trim() || `Typebot ${typebotExternalId}`,
           webhookSecretHash: webhookSecret
             ? hashWebhookSecret(webhookSecret)
+            : null,
+          webhookSecretEncrypted: webhookSecret
+            ? encryptSecret(webhookSecret)
+            : null,
+          apiTokenEncrypted: typebotApiToken ? encryptSecret(typebotApiToken) : null,
+          metricsApiBaseUrl: typebotMetricsApiBaseUrl
+            ? typebotMetricsApiBaseUrl.replace(/\/$/, "")
             : null,
         })
         .returning({ id: typebotBots.id });
@@ -210,6 +223,7 @@ export async function run(): Promise<void> {
   // 8. Opcional: instância Evolution no tenant do seed (idempotente por tenant_id + external_id)
   const evolutionExternalId = process.env.SEED_EVOLUTION_EXTERNAL_ID?.trim();
   const evolutionBaseUrl = process.env.SEED_EVOLUTION_BASE_URL?.trim();
+  const evolutionApiKey = process.env.SEED_EVOLUTION_API_KEY?.trim();
   if (evolutionExternalId && evolutionBaseUrl) {
     const [existingInstance] = await db
       .select({ id: evolutionInstances.id })
@@ -228,6 +242,7 @@ export async function run(): Promise<void> {
           tenantId,
           externalId: evolutionExternalId,
           baseUrl: evolutionBaseUrl,
+          apiKeyEncrypted: evolutionApiKey ? encryptSecret(evolutionApiKey) : null,
           instanceName:
             process.env.SEED_EVOLUTION_INSTANCE_NAME?.trim() ||
             `Evolution ${evolutionExternalId}`,

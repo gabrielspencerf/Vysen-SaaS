@@ -2,6 +2,11 @@
 
 Este guia cobre: subir o projeto no **GitHub** e rodar a stack completa com **Docker** no **Portainer**.
 
+Para ambiente com **Docker Swarm + Traefik** (modelo de stack com `deploy` e labels), use:
+
+- `docs/DOCKER_SWARM_PORTAINER.md`
+- `docker-stack.swarm.yml`
+
 ---
 
 ## 1. Subir o projeto no GitHub

@@ -11,6 +11,7 @@
 # Env (nunca versionar segredos)
 .env
 .env*.local
+stack.env
 /pgdata
 
 # Debug / logs
