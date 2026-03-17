@@ -23,6 +23,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Uploads (arquivos enviados pelos tenants)
+/uploads
+
 # Misc
 .DS_Store
 *.pem

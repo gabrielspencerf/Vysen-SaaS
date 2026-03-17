@@ -2,14 +2,15 @@ import {
   index,
   pgTable,
   timestamp,
-  unique,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
 import { tenants } from "../auth/tenants";
 import { leads } from "../funnels-leads/leads";
 import { evolutionInstances } from "../integrations/evolution-instances";
+import { uazapiInstances } from "../integrations/uazapi-instances";
 import { conversationStatusEnum } from "../../enums";
+import { contacts } from "../contacts";
 
 export const conversations = pgTable(
   "conversations",
@@ -19,9 +20,17 @@ export const conversations = pgTable(
       .notNull()
       .references(() => tenants.id, { onDelete: "cascade" }),
     leadId: uuid("lead_id").references(() => leads.id, { onDelete: "set null" }),
-    evolutionInstanceId: uuid("evolution_instance_id")
-      .notNull()
-      .references(() => evolutionInstances.id, { onDelete: "cascade" }),
+    contactId: uuid("contact_id").references(() => contacts.id, {
+      onDelete: "set null",
+    }),
+    evolutionInstanceId: uuid("evolution_instance_id").references(
+      () => evolutionInstances.id,
+      { onDelete: "cascade" }
+    ),
+    uazapiInstanceId: uuid("uazapi_instance_id").references(
+      () => uazapiInstances.id,
+      { onDelete: "cascade" }
+    ),
     externalId: varchar("external_id", { length: 255 }).notNull(),
     status: conversationStatusEnum("status").notNull(),
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true, precision: 6 }),
@@ -36,9 +45,6 @@ export const conversations = pgTable(
       .notNull(),
   },
   (t) => ({
-    conversations_tenant_instance_external_unique: unique(
-      "conversations_tenant_instance_external_unique"
-    ).on(t.tenantId, t.evolutionInstanceId, t.externalId),
     conversations_tenant_lead_idx: index("conversations_tenant_lead_idx").on(
       t.tenantId,
       t.leadId

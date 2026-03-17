@@ -12,6 +12,7 @@ import {
   utmAttributions,
   conversations,
   evolutionInstances,
+  uazapiInstances,
 } from "@/db/schema";
 
 export interface LeadDetailUtm {
@@ -131,13 +132,19 @@ export async function getLeadDetailForTenant(
         externalId: conversations.externalId,
         status: conversations.status,
         startedAt: conversations.startedAt,
-        instanceName: evolutionInstances.instanceName,
-        instanceExternalId: evolutionInstances.externalId,
+        evolutionInstanceName: evolutionInstances.instanceName,
+        evolutionInstanceExternalId: evolutionInstances.externalId,
+        uazapiInstanceName: uazapiInstances.instanceName,
+        uazapiInstanceExternalId: uazapiInstances.externalId,
       })
       .from(conversations)
-      .innerJoin(
+      .leftJoin(
         evolutionInstances,
         eq(conversations.evolutionInstanceId, evolutionInstances.id)
+      )
+      .leftJoin(
+        uazapiInstances,
+        eq(conversations.uazapiInstanceId, uazapiInstances.id)
       )
       .where(
         and(
@@ -168,15 +175,22 @@ export async function getLeadDetailForTenant(
       payload: r.payload as Record<string, unknown> | null,
       stepName: r.stepName ?? null,
     })),
-    conversations: convRows.map((r) => ({
-      id: r.id,
-      externalId: r.externalId,
-      status: r.status,
-      startedAt: r.startedAt,
-      instanceDisplay:
-        (r.instanceName && r.instanceName.trim()) ||
-        r.instanceExternalId ||
-        r.id,
-    })),
+    conversations: convRows.map((r) => {
+      const evolutionDisplay =
+        (r.evolutionInstanceName && r.evolutionInstanceName.trim()) ||
+        r.evolutionInstanceExternalId ||
+        "";
+      const uazapiDisplay =
+        (r.uazapiInstanceName && r.uazapiInstanceName.trim()) ||
+        r.uazapiInstanceExternalId ||
+        "";
+      return {
+        id: r.id,
+        externalId: r.externalId,
+        status: r.status,
+        startedAt: r.startedAt,
+        instanceDisplay: evolutionDisplay || uazapiDisplay || r.id,
+      };
+    }),
   };
 }

@@ -81,12 +81,16 @@ export default async function AdminObservabilityPage() {
               <p className="text-brand-text">{snapshot.queue.typebotDepth}</p>
               <p className="text-brand-muted">Evolution</p>
               <p className="text-brand-text">{snapshot.queue.evolutionDepth}</p>
+              <p className="text-brand-muted">UAZAPI</p>
+              <p className="text-brand-text">{snapshot.queue.uazapiDepth}</p>
               <p className="text-brand-muted">Google Ads</p>
               <p className="text-brand-text">{snapshot.queue.googleAdsDepth}</p>
               <p className="text-brand-muted">DLQ Typebot</p>
               <p className="text-brand-text">{snapshot.queue.typebotDlqDepth}</p>
               <p className="text-brand-muted">DLQ Evolution</p>
               <p className="text-brand-text">{snapshot.queue.evolutionDlqDepth}</p>
+              <p className="text-brand-muted">DLQ UAZAPI</p>
+              <p className="text-brand-text">{snapshot.queue.uazapiDlqDepth}</p>
               <p className="text-brand-muted">DLQ Google Ads</p>
               <p className="text-brand-text">{snapshot.queue.googleAdsDlqDepth}</p>
             </div>
@@ -149,6 +153,52 @@ export default async function AdminObservabilityPage() {
                     <span className={statusBadge(item.status)}>
                       {item.status} ({item.latencyMs}ms)
                     </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="mt-6">
+        <Card className="bg-brand-surface border-brand-border">
+          <CardContent className="p-5">
+            <h2 className="text-brand-text font-semibold">Últimos eventos Evolution (webhook)</h2>
+            <p className="mt-1 text-sm text-brand-muted">
+              Se as conversas não aparecem, confira aqui se os eventos estão chegando e se o worker processou.
+              Use na Evolution a URL exata da aba Integrações (com o UUID da instância) e o evento MESSAGES_UPSERT.
+            </p>
+            {snapshot.recentEvolutionWebhookEvents.length === 0 ? (
+              <p className="mt-3 text-sm text-brand-muted">
+                Nenhum evento recebido ainda. Verifique se a URL do webhook na Evolution está correta e se o evento MESSAGES_UPSERT está habilitado.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-2 max-h-64 overflow-y-auto">
+                {snapshot.recentEvolutionWebhookEvents.map((ev) => (
+                  <li
+                    key={ev.id}
+                    className="rounded-lg border border-brand-border p-2 text-sm"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-medium text-brand-text">{ev.eventType}</span>
+                      <span className="text-xs text-brand-muted">
+                        {new Date(ev.receivedAt).toLocaleString("pt-BR")}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                      {ev.processedAt ? (
+                        <span className="text-emerald-600 dark:text-emerald-300">Processado</span>
+                      ) : (
+                        <span className="text-amber-600 dark:text-amber-300">Pendente</span>
+                      )}
+                      {ev.processingError && (
+                        <span className="text-red-600 dark:text-red-300" title={ev.processingError}>
+                          Erro: {ev.processingError.slice(0, 60)}
+                          {ev.processingError.length > 60 ? "…" : ""}
+                        </span>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>

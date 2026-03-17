@@ -27,12 +27,19 @@ export default async function DashboardLeadDetailPage({
   return (
     <div className="space-y-6">
       <PageSection variant="plain" className="px-1 py-0 sm:px-2 md:px-2 md:pt-0 md:pb-0">
-        <div className="mb-6">
+        <div className="mb-6 flex flex-wrap items-center gap-3">
           <Link
             href="/dashboard/leads"
             className="text-sm text-brand-muted hover:text-brand-text transition-colors"
           >
             ← Voltar para Leads
+          </Link>
+          <span className="text-brand-muted">|</span>
+          <Link
+            href={`/dashboard/leads/${lead.id}/edit`}
+            className="text-sm text-brand-neon hover:underline transition-colors"
+          >
+            Editar informações
           </Link>
         </div>
 

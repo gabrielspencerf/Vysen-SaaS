@@ -13,6 +13,7 @@ import {
   Building2,
   Users,
 } from "lucide-react";
+import { Button } from "@/components/ui";
 
 const navItems: { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { href: "/admin", label: "Início", icon: LayoutDashboard },
@@ -80,20 +81,16 @@ export function AdminSidebar({ userEmail }: AdminSidebarProps) {
           <p className="truncate text-xs text-brand-muted" title={userEmail}>
             {userEmail}
           </p>
-          <div className="mt-2 flex items-center gap-4">
-            <Link
-              href="/"
-              className="text-sm text-brand-muted transition-colors hover:text-brand-text"
-            >
-              Voltar
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <Link href="/">
+              <Button type="button" variant="ghost" size="sm">
+                Voltar
+              </Button>
             </Link>
             <form action="/api/auth/logout" method="POST">
-              <button
-                type="submit"
-                className="text-sm text-brand-muted transition-colors hover:text-brand-text"
-              >
+              <Button type="submit" variant="ghost" size="sm">
                 Sair
-              </button>
+              </Button>
             </form>
           </div>
         </div>

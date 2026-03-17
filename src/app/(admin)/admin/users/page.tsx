@@ -4,6 +4,7 @@ import { PageSection } from "@/components/layout/page-section";
 import { ListTableHeader } from "@/components/layout/list-table-header";
 import { ListRowCard } from "@/components/layout/list-row-card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Button } from "@/components/ui";
 
 export default async function AdminUsersPage() {
   const users = await listUsers();
@@ -11,8 +12,8 @@ export default async function AdminUsersPage() {
     <PageSection variant="plain" className="px-1 py-0 sm:px-2 md:px-2 md:pt-0 md:pb-0">
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-brand-text">Usuários</h1>
-        <Link href="/admin/users/new" className="btn-cta-primary inline-flex text-sm">
-          Novo usuário
+        <Link href="/admin/users/new">
+          <Button size="sm">Novo usuário</Button>
         </Link>
       </div>
 
@@ -21,8 +22,8 @@ export default async function AdminUsersPage() {
           title="Nenhum usuário cadastrado"
           description="Você ainda não possui usuários. Crie o primeiro usuário para começar."
           action={
-            <Link href="/admin/users/new" className="btn-cta-primary mt-2 inline-flex">
-              Criar Usuário
+            <Link href="/admin/users/new">
+              <Button size="sm" className="mt-2">Criar Usuário</Button>
             </Link>
           }
         />

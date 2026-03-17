@@ -10,9 +10,14 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
+  UserCircle,
   MessageSquare,
   BarChart3,
   Filter,
+  Package,
+  Flag,
+  TrendingUp,
+  Gauge,
   Settings,
 } from "lucide-react";
 import { TenantSwitcher } from "@/components/tenant-switcher";
@@ -22,9 +27,14 @@ import type { MembershipItem } from "@/server/tenancy/membership";
 const navItems: { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { href: "/dashboard/home", label: "Início", icon: LayoutDashboard },
   { href: "/dashboard/leads", label: "Leads", icon: Users },
+  { href: "/dashboard/opportunities", label: "Oportunidades", icon: TrendingUp },
+  { href: "/dashboard/contacts", label: "Contatos", icon: UserCircle },
   { href: "/dashboard/conversations", label: "Conversas", icon: MessageSquare },
   { href: "/dashboard/google-ads", label: "Google Ads", icon: BarChart3 },
   { href: "/dashboard/funnel", label: "Funil", icon: Filter },
+  { href: "/dashboard/products", label: "Produtos", icon: Package },
+  { href: "/dashboard/complaints", label: "Reclamações", icon: Flag },
+  { href: "/dashboard/pagespeed", label: "PageSpeed", icon: Gauge },
   { href: "/dashboard/settings", label: "Configurações", icon: Settings },
 ];
 

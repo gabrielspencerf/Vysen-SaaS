@@ -2,6 +2,7 @@ import { desc, isNotNull, sql } from "drizzle-orm";
 import { getDb } from "@/server/db";
 import {
   evolutionWebhookEvents,
+  uazapiWebhookEvents,
   typebotWebhookEvents,
   processingFailures,
 } from "@/db/schema";
@@ -13,9 +14,11 @@ import {
 import {
   QUEUE_RAW_EVOLUTION,
   QUEUE_RAW_TYPEBOT,
+  QUEUE_RAW_UAZAPI,
   QUEUE_SYNC_GOOGLE_ADS,
   DLQ_RAW_EVOLUTION,
   DLQ_RAW_TYPEBOT,
+  DLQ_RAW_UAZAPI,
   DLQ_SYNC_GOOGLE_ADS,
 } from "@/workers/queue";
 import { providerRegistry } from "@/server/integrations/providers/registry";
@@ -31,9 +34,11 @@ export interface ObservabilitySnapshot {
   queue: {
     typebotDepth: number;
     evolutionDepth: number;
+    uazapiDepth: number;
     googleAdsDepth: number;
     typebotDlqDepth: number;
     evolutionDlqDepth: number;
+    uazapiDlqDepth: number;
     googleAdsDlqDepth: number;
   };
   integrations: {
@@ -61,6 +66,15 @@ export interface ObservabilitySnapshot {
     message: string;
     occurredAt: string;
   }>;
+  /** Últimos eventos recebidos do webhook Evolution (para debug de conversas). */
+  recentEvolutionWebhookEvents: Array<{
+    id: string;
+    eventType: string;
+    receivedAt: string;
+    processedAt: string | null;
+    processingError: string | null;
+    evolutionInstanceId: string;
+  }>;
 }
 
 async function getQueueMetrics() {
@@ -71,9 +85,11 @@ async function getQueueMetrics() {
       queue: {
         typebotDepth: 0,
         evolutionDepth: 0,
+        uazapiDepth: 0,
         googleAdsDepth: 0,
         typebotDlqDepth: 0,
         evolutionDlqDepth: 0,
+        uazapiDlqDepth: 0,
         googleAdsDlqDepth: 0,
       },
     };
@@ -83,17 +99,21 @@ async function getQueueMetrics() {
     const [
       typebotDepth,
       evolutionDepth,
+      uazapiDepth,
       googleAdsDepth,
       typebotDlqDepth,
       evolutionDlqDepth,
+      uazapiDlqDepth,
       googleAdsDlqDepth,
       workerHeartbeat,
     ] = await Promise.all([
       redis.llen(QUEUE_RAW_TYPEBOT),
       redis.llen(QUEUE_RAW_EVOLUTION),
+      redis.llen(QUEUE_RAW_UAZAPI),
       redis.llen(QUEUE_SYNC_GOOGLE_ADS),
       redis.llen(DLQ_RAW_TYPEBOT),
       redis.llen(DLQ_RAW_EVOLUTION),
+      redis.llen(DLQ_RAW_UAZAPI),
       redis.llen(DLQ_SYNC_GOOGLE_ADS),
       redis.get(HEARTBEAT_KEY),
     ]);
@@ -112,9 +132,11 @@ async function getQueueMetrics() {
       queue: {
         typebotDepth,
         evolutionDepth,
+        uazapiDepth,
         googleAdsDepth,
         typebotDlqDepth,
         evolutionDlqDepth,
+        uazapiDlqDepth,
         googleAdsDlqDepth,
       },
     };
@@ -125,9 +147,11 @@ async function getQueueMetrics() {
       queue: {
         typebotDepth: 0,
         evolutionDepth: 0,
+        uazapiDepth: 0,
         googleAdsDepth: 0,
         typebotDlqDepth: 0,
         evolutionDlqDepth: 0,
+        uazapiDlqDepth: 0,
         googleAdsDlqDepth: 0,
       },
     };
@@ -138,7 +162,7 @@ async function getQueueMetrics() {
 
 async function getRecentErrors() {
   const db = getDb();
-  const [typebotErrors, evolutionErrors, workerFailures] = await Promise.all([
+  const [typebotErrors, evolutionErrors, uazapiErrors, workerFailures] = await Promise.all([
     db
       .select({
         message: typebotWebhookEvents.processingError,
@@ -156,6 +180,15 @@ async function getRecentErrors() {
       .from(evolutionWebhookEvents)
       .where(isNotNull(evolutionWebhookEvents.processingError))
       .orderBy(desc(evolutionWebhookEvents.processedAt))
+      .limit(10),
+    db
+      .select({
+        message: uazapiWebhookEvents.processingError,
+        occurredAt: uazapiWebhookEvents.processedAt,
+      })
+      .from(uazapiWebhookEvents)
+      .where(isNotNull(uazapiWebhookEvents.processingError))
+      .orderBy(desc(uazapiWebhookEvents.processedAt))
       .limit(10),
     db
       .select({
@@ -178,6 +211,11 @@ async function getRecentErrors() {
       message: row.message ?? "erro sem mensagem",
       occurredAt: row.occurredAt?.toISOString() ?? new Date(0).toISOString(),
     })),
+    ...uazapiErrors.map((row) => ({
+      source: "uazapi",
+      message: row.message ?? "erro sem mensagem",
+      occurredAt: row.occurredAt?.toISOString() ?? new Date(0).toISOString(),
+    })),
     ...workerFailures.map((row) => ({
       source: "worker",
       message: row.message ?? "erro sem mensagem",
@@ -186,6 +224,30 @@ async function getRecentErrors() {
   ]
     .sort((a, b) => (a.occurredAt > b.occurredAt ? -1 : 1))
     .slice(0, 15);
+}
+
+async function getRecentEvolutionWebhookEvents() {
+  const db = getDb();
+  const rows = await db
+    .select({
+      id: evolutionWebhookEvents.id,
+      eventType: evolutionWebhookEvents.eventType,
+      receivedAt: evolutionWebhookEvents.receivedAt,
+      processedAt: evolutionWebhookEvents.processedAt,
+      processingError: evolutionWebhookEvents.processingError,
+      evolutionInstanceId: evolutionWebhookEvents.evolutionInstanceId,
+    })
+    .from(evolutionWebhookEvents)
+    .orderBy(desc(evolutionWebhookEvents.receivedAt))
+    .limit(15);
+  return rows.map((r) => ({
+    id: r.id,
+    eventType: r.eventType,
+    receivedAt: r.receivedAt.toISOString(),
+    processedAt: r.processedAt?.toISOString() ?? null,
+    processingError: r.processingError ?? null,
+    evolutionInstanceId: r.evolutionInstanceId,
+  }));
 }
 
 export async function getObservabilitySnapshot(): Promise<ObservabilitySnapshot> {
@@ -198,10 +260,11 @@ export async function getObservabilitySnapshot(): Promise<ObservabilitySnapshot>
     dbStatus = "error";
   }
 
-  const [queueData, providerStatuses, errors] = await Promise.all([
+  const [queueData, providerStatuses, errors, recentEvolutionWebhookEvents] = await Promise.all([
     getQueueMetrics(),
     Promise.all(providerRegistry.map((provider) => provider.fetchStatuses())),
     getRecentErrors(),
+    getRecentEvolutionWebhookEvents(),
   ]);
 
   const flattenedStatuses = providerStatuses.flat();
@@ -242,5 +305,6 @@ export async function getObservabilitySnapshot(): Promise<ObservabilitySnapshot>
       uazapi: uazapiStatuses,
     },
     errors,
+    recentEvolutionWebhookEvents,
   };
 }

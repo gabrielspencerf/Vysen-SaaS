@@ -1,0 +1,3 @@
+nome,email,telefone,status,origem,observacoes
+João Silva,joao@exemplo.com,+5511999990000,new,import,Lead importado via planilha
+Maria Santos,maria@exemplo.com,+5511988880000,contacted,import,

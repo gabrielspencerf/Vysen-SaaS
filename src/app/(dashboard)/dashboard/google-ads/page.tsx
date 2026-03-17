@@ -469,6 +469,42 @@ export default async function DashboardGoogleAdsPage({
           </div>
         )}
       </PageSection>
+
+      <PageSection variant="plain" className="px-1 py-0 sm:px-2 md:px-2 md:pt-0 md:pb-0">
+        <span className="section-eyebrow">conversões offline</span>
+        <h2 className="mt-2 text-lg font-semibold text-brand-text">
+          Planilha offline / Leads qualificados
+        </h2>
+        <p className="mt-2 text-sm text-brand-muted">
+          O Google Ads permite enviar conversões e leads qualificados via planilha. Exporte seus leads
+          no formato esperado e faça o upload em{" "}
+          <a
+            href="https://ads.google.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-brand-neon hover:underline"
+          >
+            Google Ads
+          </a>{" "}
+          (Ferramentas e configurações → Medição → Conversões → Importar).
+        </p>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Link
+            href="/dashboard/leads"
+            className="inline-flex items-center gap-2 rounded-md border border-brand-border bg-brand-surface px-4 py-2 text-sm font-medium text-brand-text hover:bg-brand-surface/80"
+          >
+            Exportar leads
+          </Link>
+          <a
+            href="https://support.google.com/google-ads/answer/6331314"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-md border border-brand-border bg-brand-surface px-4 py-2 text-sm font-medium text-brand-text hover:bg-brand-surface/80"
+          >
+            Modelo e instruções (Google)
+          </a>
+        </div>
+      </PageSection>
     </div>
   );
 }

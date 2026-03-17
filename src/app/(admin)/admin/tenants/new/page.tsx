@@ -100,15 +100,11 @@ export default function NewTenantPage() {
           <Button
             type="submit"
             disabled={submitting}
-            className="btn-cta-primary"
-          >
+            >
             {submitting ? "Criando…" : "Criar"}
           </Button>
-          <Link
-            href="/admin/tenants"
-            className="inline-flex items-center justify-center gap-2 rounded-md border border-brand-border bg-transparent px-5 py-2.5 text-sm font-medium text-brand-text hover:bg-brand-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-muted"
-          >
-            Cancelar
+          <Link href="/admin/tenants">
+            <Button type="button" variant="secondary">Cancelar</Button>
           </Link>
         </div>
       </form>

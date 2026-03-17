@@ -97,7 +97,7 @@ export default async function DashboardHomePage({
               <h2 className="text-base font-medium text-brand-text">Captura de Leads</h2>
             </div>
             <p className="text-sm text-brand-muted">Evolução de novos leads na última semana</p>
-            <LeadsChart />
+            <LeadsChart data={summary.leadsByDay} />
           </div>
           <div className="panel-lux rounded-xl border border-brand-border bg-brand-surface p-5 shadow-sm hover-lift">
             <span className="section-eyebrow mb-2">investimento</span>
@@ -106,7 +106,7 @@ export default async function DashboardHomePage({
               <h2 className="text-base font-medium text-brand-text">Gasto em Ads</h2>
             </div>
             <p className="text-sm text-brand-muted">Evolução do investimento nas últimas 4 semanas</p>
-            <AdsSpendChart />
+            <AdsSpendChart data={summary.adsSpendByWeek} />
           </div>
         </div>
 

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, User, Phone, CheckCheck } from "lucide-react";
+import { ArrowLeft, User, Phone, CheckCheck, Mic, Image } from "lucide-react";
 import {
   getDashboardTenantContext,
   getConversationDetailForTenant,
@@ -97,8 +97,22 @@ export default async function DashboardConversationDetailPage({
                       : "bg-white dark:bg-[#202c33] rounded-tl-none text-[#111b21] dark:text-[#e9edef]"
                   }`}
                 >
+                  {m.contentType === "audio" && (
+                    <div className="flex items-center gap-1.5 text-xs opacity-90 mb-1">
+                      <Mic className="h-3.5 w-3.5" aria-hidden />
+                      <span>Áudio</span>
+                      {m.contentText && <span className="opacity-75">· transcrito</span>}
+                    </div>
+                  )}
+                  {m.contentType === "image" && (
+                    <div className="flex items-center gap-1.5 text-xs opacity-90 mb-1">
+                      <Image className="h-3.5 w-3.5" aria-hidden />
+                      <span>Imagem</span>
+                      {m.contentText && <span className="opacity-75">· descrita</span>}
+                    </div>
+                  )}
                   <p className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">
-                    {m.contentText ?? (m.contentType !== "text" ? `[${m.contentType}]` : "")}
+                    {m.contentText ?? (m.contentType !== "text" && m.contentType !== "audio" && m.contentType !== "image" ? `[${m.contentType}]` : m.contentType === "audio" ? "Aguardando transcrição ou áudio não disponível." : m.contentType === "image" ? "Aguardando descrição ou imagem não disponível." : "")}
                   </p>
                   <div className="flex items-center justify-end gap-1 mt-1 -mb-1">
                     <span className="text-[11px] text-black/50 dark:text-white/50">

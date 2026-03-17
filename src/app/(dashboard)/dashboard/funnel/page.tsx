@@ -46,12 +46,22 @@ export default async function DashboardFunnelPage({
 
   return (
     <PageSection variant="plain" className="px-1 py-0 sm:px-2 md:px-2 md:pt-0 md:pb-0">
-      <span className="section-eyebrow">análise de pipeline</span>
-      <h1 className="text-2xl font-bold text-brand-text">Funil</h1>
-      <p className="mt-2 text-brand-muted">
-        Volume por etapa, conversão e progressão. Destaque para o possível
-        gargalo entre etapas.
-      </p>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <span className="section-eyebrow">análise de pipeline</span>
+          <h1 className="text-2xl font-bold text-brand-text">Funil</h1>
+          <p className="mt-2 text-brand-muted">
+            Volume por etapa, conversão e progressão. Destaque para o possível
+            gargalo entre etapas.
+          </p>
+        </div>
+        <Link
+          href="/dashboard/funnel/config"
+          className="rounded-lg border border-brand-border bg-brand-surface px-4 py-2 text-sm font-medium text-brand-text hover:bg-brand-surface/80"
+        >
+          Configurar funil
+        </Link>
+      </div>
 
       {/* Filtro de período: leads com first_seen_at no período */}
       <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
@@ -86,14 +96,14 @@ export default async function DashboardFunnelPage({
         <div className="mt-6">
           <EmptyState
             title="Nenhum funil configurado para este tenant"
-            description="Funis e etapas são configurados no banco ou via integrações (ex.: Typebot com variáveis de etapa). Quando houver funil ativo e leads associados, a progressão aparecerá aqui."
+            description="Configure o funil pelo perfil do cliente em Configurações ou no botão acima. Crie um funil, adicione as etapas na ordem desejada e defina-o como padrão. Quando houver leads no funil, a progressão aparecerá aqui."
             icon={<Filter className="h-6 w-6" />}
             action={
               <Link
-                href="/dashboard/leads"
+                href="/dashboard/funnel/config"
                 className="inline-flex items-center rounded-lg border border-brand-border bg-transparent px-4 py-2 text-xs font-medium uppercase tracking-wider text-brand-text transition-colors hover:bg-brand-surface"
               >
-                ← Voltar para Leads
+                Configurar funil
               </Link>
             }
           />

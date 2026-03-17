@@ -9,19 +9,23 @@ import {
   dequeue,
   QUEUE_RAW_TYPEBOT,
   QUEUE_RAW_EVOLUTION,
+  QUEUE_RAW_UAZAPI,
   QUEUE_SYNC_GOOGLE_ADS,
   DLQ_RAW_TYPEBOT,
   DLQ_RAW_EVOLUTION,
+  DLQ_RAW_UAZAPI,
   DLQ_SYNC_GOOGLE_ADS,
   enqueue,
 } from "./queue";
 import { processTypebotRaw } from "./processors/typebot";
 import { processEvolutionRaw } from "./processors/evolution";
+import { processUazapiRaw } from "./processors/uazapi";
 import { runSyncForAccount } from "@/server/integrations/google-ads";
 import type {
   JobPayload,
   JobProcessTypebotRaw,
   JobProcessEvolutionRaw,
+  JobProcessUazapiRaw,
   JobSyncGoogleAdsAccount,
 } from "./queue/types";
 
@@ -133,6 +137,37 @@ function loopEvolution(): void {
     });
 }
 
+async function runUazapiConsumer(): Promise<void> {
+  const job = await dequeue(redis, QUEUE_RAW_UAZAPI, 5);
+  if (!job) return;
+  if (job.type !== "process_uazapi_raw") return;
+  const result = await processUazapiRaw(job);
+  if ("error" in result) {
+    console.error("[uazapi] processing failed", {
+      rawEventId: job.rawEventId,
+      error: result.error,
+    });
+    await retryJob(
+      job as JobProcessUazapiRaw,
+      QUEUE_RAW_UAZAPI,
+      DLQ_RAW_UAZAPI,
+      result.error
+    );
+  } else {
+    console.log("[uazapi] processed", { rawEventId: job.rawEventId });
+  }
+}
+
+function loopUazapi(): void {
+  runUazapiConsumer()
+    .catch((err) => {
+      console.error("[uazapi] consumer error", err);
+    })
+    .then(() => {
+      setImmediate(loopUazapi);
+    });
+}
+
 async function runGoogleAdsSyncConsumer(): Promise<void> {
   const job = await dequeue(redis, QUEUE_SYNC_GOOGLE_ADS, 5);
   if (!job) return;
@@ -167,10 +202,11 @@ function loopGoogleAdsSync(): void {
 
 redis.on("connect", () => {
   console.log(
-    "Worker: Redis conectado; heartbeat e filas typebot/evolution/google-ads ativos."
+    "Worker: Redis conectado; heartbeat e filas typebot/evolution/uazapi/google-ads ativos."
   );
   loopTypebot();
   loopEvolution();
+  loopUazapi();
   loopGoogleAdsSync();
 });
 

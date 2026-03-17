@@ -42,6 +42,20 @@ export interface AnalyticsSummaryOptions {
   periodDays?: number;
 }
 
+/** Um dia na série "leads por dia" (últimos 7 dias). */
+export interface LeadsByDayRow {
+  name: string;
+  leads: number;
+  date: string;
+}
+
+/** Uma semana na série "gasto em ads" (últimas 4 semanas). */
+export interface AdsSpendByWeekRow {
+  name: string;
+  gasto: number;
+  cliques: number;
+}
+
 export interface AnalyticsSummary {
   totalLeads: number;
   totalConversations: number;
@@ -51,6 +65,10 @@ export interface AnalyticsSummary {
   topCampaignsBySpend: AnalyticsTopCampaignRow[];
   recentLeads: LeadRow[];
   recentConversations: ConversationRow[];
+  /** Leads por dia (últimos 7 dias) para o gráfico da home. */
+  leadsByDay: LeadsByDayRow[];
+  /** Gasto por semana (últimas 4 semanas) para o gráfico da home. */
+  adsSpendByWeek: AdsSpendByWeekRow[];
 }
 
 function clampPeriodDays(days: number): number {
@@ -92,6 +110,66 @@ async function getAdsPeriodTotals(
     clicks: Number(row.clicks),
     impressions: Number(row.impressions),
   };
+}
+
+const DAY_NAMES = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"] as const;
+
+/**
+ * Contagem de novos leads por dia (últimos 7 dias). Usado no gráfico da home.
+ */
+async function getLeadsByDayLast7(tenantId: string): Promise<AnalyticsSummary["leadsByDay"]> {
+  const db = getDb();
+  const result = await db.execute<{ d: string; c: string }>(sql`
+    SELECT (first_seen_at AT TIME ZONE 'UTC')::date AS d, count(*)::text AS c
+    FROM leads
+    WHERE tenant_id = ${tenantId}
+      AND first_seen_at >= current_date - interval '7 days'
+    GROUP BY (first_seen_at AT TIME ZONE 'UTC')::date
+    ORDER BY d
+  `);
+  const rows = Array.isArray(result) ? result : (result as { rows?: typeof result }).rows ?? [];
+  const byDate = new Map<string, number>();
+  for (const r of rows) byDate.set(r.d, Number(r.c));
+
+  const out: AnalyticsSummary["leadsByDay"] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const dayName = DAY_NAMES[d.getUTCDay()];
+    out.push({ name: dayName, leads: byDate.get(dateStr) ?? 0, date: dateStr });
+  }
+  return out;
+}
+
+/**
+ * Gasto em ads por semana (últimas 4 semanas). Usado no gráfico da home.
+ */
+async function getAdsSpendByWeekLast4(tenantId: string): Promise<AnalyticsSummary["adsSpendByWeek"]> {
+  const db = getDb();
+  const result = await db.execute<{ week_start: string; spend: string; clicks: string }>(sql`
+    SELECT
+      date_trunc('week', period_start)::date AS week_start,
+      sum(coalesce((metrics->>'cost')::numeric, (metrics->>'costMicros')::numeric / 1000000, 0))::text AS spend,
+      sum(coalesce((metrics->>'clicks')::bigint, 0))::text AS clicks
+    FROM campaign_snapshots
+    WHERE tenant_id = ${tenantId}
+      AND period_start >= current_date - interval '28 days'
+    GROUP BY date_trunc('week', period_start)::date
+    ORDER BY week_start
+    LIMIT 4
+  `);
+  const rows = Array.isArray(result) ? result : (result as { rows?: typeof result }).rows ?? [];
+  const out: AnalyticsSummary["adsSpendByWeek"] = [
+    { name: "Semana 1", gasto: 0, cliques: 0 },
+    { name: "Semana 2", gasto: 0, cliques: 0 },
+    { name: "Semana 3", gasto: 0, cliques: 0 },
+    { name: "Semana 4", gasto: 0, cliques: 0 },
+  ];
+  rows.slice(0, 4).forEach((r, i) => {
+    out[i] = { name: `Semana ${i + 1}`, gasto: Number(r.spend), cliques: Number(r.clicks) };
+  });
+  return out;
 }
 
 /**
@@ -157,6 +235,8 @@ export async function getAnalyticsSummaryForTenant(
     topCampaigns,
     recentLeads,
     recentConversations,
+    leadsByDay,
+    adsSpendByWeek,
   ] = await Promise.all([
     db
       .select({ value: sql<number>`count(*)::int` })
@@ -174,6 +254,8 @@ export async function getAnalyticsSummaryForTenant(
     getTopCampaignsBySpend(tenantId, periodDays),
     listLeadsForTenant(tenantId, { limit: RECENT_LEADS_LIMIT }),
     listConversationsForTenant(tenantId, { limit: RECENT_CONVERSATIONS_LIMIT }),
+    getLeadsByDayLast7(tenantId),
+    getAdsSpendByWeekLast4(tenantId),
   ]);
 
   const totalLeads = totalLeadsResult[0]?.value ?? 0;
@@ -189,5 +271,7 @@ export async function getAnalyticsSummaryForTenant(
     topCampaignsBySpend: topCampaigns,
     recentLeads,
     recentConversations,
+    leadsByDay,
+    adsSpendByWeek,
   };
 }

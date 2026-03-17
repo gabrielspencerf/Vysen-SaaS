@@ -42,22 +42,11 @@ const CHART_THEME = {
   },
 } as const;
 
-const mockLeadData = [
-  { name: "Seg", leads: 12, tone: 0.68, highlight: false },
-  { name: "Ter", leads: 19, tone: 0.82, highlight: false },
-  { name: "Qua", leads: 15, tone: 0.58, highlight: false },
-  { name: "Qui", leads: 22, tone: 0.95, highlight: true },
-  { name: "Sex", leads: 28, tone: 0.9, highlight: false },
-  { name: "Sáb", leads: 10, tone: 0.55, highlight: false },
-  { name: "Dom", leads: 8, tone: 0.46, highlight: false },
-];
+/** Formato esperado para o gráfico de leads por dia (dados reais do servidor). */
+export type LeadsChartDataItem = { name: string; leads: number };
 
-const mockAdsData = [
-  { name: "Semana 1", gasto: 400, cliques: 1200 },
-  { name: "Semana 2", gasto: 300, cliques: 900 },
-  { name: "Semana 3", gasto: 550, cliques: 1800 },
-  { name: "Semana 4", gasto: 620, cliques: 2100 },
-];
+/** Formato esperado para o gráfico de gasto em ads por semana (dados reais do servidor). */
+export type AdsSpendChartDataItem = { name: string; gasto: number; cliques: number };
 
 type TooltipTheme =
   | (typeof CHART_THEME)["light"]["tooltip"]
@@ -85,20 +74,31 @@ function formatGasto(value: number) {
   );
 }
 
-export function LeadsChart() {
+const DEFAULT_LEADS_DATA: LeadsChartDataItem[] = [
+  { name: "Seg", leads: 0 },
+  { name: "Ter", leads: 0 },
+  { name: "Qua", leads: 0 },
+  { name: "Qui", leads: 0 },
+  { name: "Sex", leads: 0 },
+  { name: "Sáb", leads: 0 },
+  { name: "Dom", leads: 0 },
+];
+
+export function LeadsChart({ data }: { data?: LeadsChartDataItem[] | null }) {
   const { theme } = useTheme();
   const isLight = theme === "light";
   const th = isLight ? CHART_THEME.light : CHART_THEME.dark;
   const t = th.tooltip;
   const color = th.neon;
   const colorLight = th.neonLight;
-  const barContrast = th.barContrast;
+  const chartData = data && data.length > 0 ? data : DEFAULT_LEADS_DATA;
+  const maxVal = Math.max(...chartData.map((d) => d.leads), 1);
 
   return (
     <div className="mt-2 h-[248px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
-          data={mockLeadData}
+          data={chartData}
           margin={{ top: 6, right: 6, left: 0, bottom: 0 }}
           barCategoryGap="28%"
           barGap={4}
@@ -145,11 +145,11 @@ export function LeadsChart() {
             radius={[999, 999, 999, 999]}
             maxBarSize={34}
           >
-            {mockLeadData.map((entry) => (
+            {chartData.map((entry) => (
               <Cell
                 key={`cell-${entry.name}`}
-                fill={entry.highlight ? barContrast : color}
-                fillOpacity={entry.highlight ? 0.95 : entry.tone}
+                fill={color}
+                fillOpacity={maxVal > 0 ? 0.5 + (entry.leads / maxVal) * 0.5 : 0.5}
               />
             ))}
           </Bar>
@@ -159,19 +159,27 @@ export function LeadsChart() {
   );
 }
 
-export function AdsSpendChart() {
+const DEFAULT_ADS_DATA: AdsSpendChartDataItem[] = [
+  { name: "Semana 1", gasto: 0, cliques: 0 },
+  { name: "Semana 2", gasto: 0, cliques: 0 },
+  { name: "Semana 3", gasto: 0, cliques: 0 },
+  { name: "Semana 4", gasto: 0, cliques: 0 },
+];
+
+export function AdsSpendChart({ data }: { data?: AdsSpendChartDataItem[] | null }) {
   const { theme } = useTheme();
   const isLight = theme === "light";
   const th = isLight ? CHART_THEME.light : CHART_THEME.dark;
   const t = th.tooltip;
   const color = th.neon;
   const colorLight = th.neonLight;
+  const chartData = data && data.length > 0 ? data : DEFAULT_ADS_DATA;
 
   return (
     <div className="mt-2 h-[248px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
-          data={mockAdsData}
+          data={chartData}
           margin={{ top: 6, right: 6, left: 0, bottom: 0 }}
         >
           <defs>

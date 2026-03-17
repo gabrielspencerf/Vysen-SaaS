@@ -29,24 +29,22 @@ export default async function AdminIntegrationsPage() {
       {/* Ações: Conectar Typebot / Conectar Evolution */}
       <div className="mt-6 flex flex-wrap gap-3">
         <Link href="/admin/integrations/typebot/new">
-          <Button variant="secondary" className="gap-2 border-brand-border bg-brand-surface text-brand-text hover:border-brand-neon/40 hover:text-brand-neon">
+          <Button variant="secondary" className="gap-2">
             <Plus className="h-4 w-4" aria-hidden />
             Conectar Typebot
           </Button>
         </Link>
         <Link href="/admin/integrations/typebot/metrics">
-          <Button variant="secondary" className="gap-2 border-brand-border bg-brand-surface text-brand-text hover:border-brand-neon/40 hover:text-brand-neon">
-            Sincronizar métricas Typebot
-          </Button>
+          <Button variant="secondary">Sincronizar métricas Typebot</Button>
         </Link>
         <Link href="/admin/integrations/evolution/new">
-          <Button variant="secondary" className="gap-2 border-brand-border bg-brand-surface text-brand-text hover:border-brand-neon/40 hover:text-brand-neon">
+          <Button variant="secondary" className="gap-2">
             <Plus className="h-4 w-4" aria-hidden />
             Conectar Evolution API
           </Button>
         </Link>
         <Link href="/admin/integrations/uazapi/new">
-          <Button variant="secondary" className="gap-2 border-brand-border bg-brand-surface text-brand-text hover:border-brand-neon/40 hover:text-brand-neon">
+          <Button variant="secondary" className="gap-2">
             <Plus className="h-4 w-4" aria-hidden />
             Conectar UAZAPI
           </Button>
@@ -278,32 +276,43 @@ export default async function AdminIntegrationsPage() {
                   <th className="px-4 py-3 font-medium text-brand-muted">
                     Base URL
                   </th>
+                  <th className="px-4 py-3 font-medium text-brand-muted">
+                    URL do webhook
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {uazapiInstances.map((inst) => (
-                  <tr
-                    key={inst.id}
-                    className="border-b border-brand-border last:border-0"
-                  >
-                    <td className="px-4 py-3 text-brand-text">
-                      {inst.tenantName}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-brand-text">
-                        {inst.instanceName || inst.externalId}
-                      </span>
-                      {inst.instanceName && (
-                        <span className="ml-1 font-mono text-xs text-brand-muted">
-                          ({inst.externalId})
+                {uazapiInstances.map((inst) => {
+                  const url = appUrl
+                    ? `${appUrl.replace(/\/$/, "")}/api/webhooks/uazapi/${inst.id}`
+                    : `[APP_URL]/api/webhooks/uazapi/${inst.id}`;
+                  return (
+                    <tr
+                      key={inst.id}
+                      className="border-b border-brand-border last:border-0"
+                    >
+                      <td className="px-4 py-3 text-brand-text">
+                        {inst.tenantName}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-brand-text">
+                          {inst.instanceName || inst.externalId}
                         </span>
-                      )}
-                    </td>
-                    <td className="max-w-[200px] truncate px-4 py-3 font-mono text-xs text-brand-muted">
-                      {inst.baseUrl}
-                    </td>
-                  </tr>
-                ))}
+                        {inst.instanceName && (
+                          <span className="ml-1 font-mono text-xs text-brand-muted">
+                            ({inst.externalId})
+                          </span>
+                        )}
+                      </td>
+                      <td className="max-w-[200px] truncate px-4 py-3 font-mono text-xs text-brand-muted">
+                        {inst.baseUrl}
+                      </td>
+                      <td className="max-w-[280px] truncate px-4 py-3 font-mono text-xs text-brand-neon">
+                        {url}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

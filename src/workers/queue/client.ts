@@ -8,18 +8,22 @@ import type { JobPayload } from "./types";
 import {
   QUEUE_RAW_TYPEBOT,
   QUEUE_RAW_EVOLUTION,
+  QUEUE_RAW_UAZAPI,
   QUEUE_SYNC_GOOGLE_ADS,
   DLQ_RAW_TYPEBOT,
   DLQ_RAW_EVOLUTION,
+  DLQ_RAW_UAZAPI,
   DLQ_SYNC_GOOGLE_ADS,
 } from "./types";
 
 export {
   QUEUE_RAW_TYPEBOT,
   QUEUE_RAW_EVOLUTION,
+  QUEUE_RAW_UAZAPI,
   QUEUE_SYNC_GOOGLE_ADS,
   DLQ_RAW_TYPEBOT,
   DLQ_RAW_EVOLUTION,
+  DLQ_RAW_UAZAPI,
   DLQ_SYNC_GOOGLE_ADS,
 };
 
@@ -29,6 +33,8 @@ function getQueueName(job: JobPayload): string {
       return QUEUE_RAW_TYPEBOT;
     case "process_evolution_raw":
       return QUEUE_RAW_EVOLUTION;
+    case "process_uazapi_raw":
+      return QUEUE_RAW_UAZAPI;
     case "sync_google_ads_account":
       return QUEUE_SYNC_GOOGLE_ADS;
     default:

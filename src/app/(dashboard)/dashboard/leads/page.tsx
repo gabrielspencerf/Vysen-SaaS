@@ -1,9 +1,9 @@
-import { getDashboardTenantContext } from "@/server/dashboard";
-import { listLeadsForTenant } from "@/server/dashboard";
+import { getDashboardTenantContext, listLeadsForTenant } from "@/server/dashboard";
 import { PageSection } from "@/components/layout";
 import { ListTableHeader, ListRowCard } from "@/components/layout";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Button } from "@/components/ui";
+import { ImportExportActions } from "@/components/dashboard/import-export-actions";
 import Link from "next/link";
 import { Users } from "lucide-react";
 
@@ -29,20 +29,37 @@ export default async function DashboardLeadsPage({
   return (
     <PageSection variant="plain" className="px-1 py-0 sm:px-2 md:px-2 md:pt-0 md:pb-0">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-brand-text">Leads</h1>
-        <form method="GET" action="/dashboard/leads" className="flex gap-2">
-          <Input
-            type="search"
-            name="search"
-            defaultValue={search}
-            placeholder="Nome, e-mail ou telefone"
-            className="w-48 bg-brand-surface border-brand-border text-brand-text"
-            aria-label="Buscar leads"
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-brand-text">Leads</h1>
+          <Link
+            href="/dashboard/leads/kanban"
+            className="text-sm font-medium text-brand-muted hover:text-brand-neon"
+          >
+            Ver Kanban
+          </Link>
+        </div>
+        <div className="flex flex-wrap items-center gap-4">
+          <ImportExportActions
+            exportUrl="/api/dashboard/leads/export"
+            importUrl="/api/dashboard/leads/import"
+            templateUrl="/templates/modelo-leads.csv"
+            search={search}
+            label="Leads"
           />
-          <Button type="submit" variant="primary" size="sm" className="btn-cta-primary">
-            Buscar
-          </Button>
-        </form>
+          <form method="GET" action="/dashboard/leads" className="flex gap-2">
+            <Input
+              type="search"
+              name="search"
+              defaultValue={search}
+              placeholder="Nome, e-mail ou telefone"
+              className="w-48 bg-brand-surface border-brand-border text-brand-text"
+              aria-label="Buscar leads"
+            />
+            <Button type="submit" variant="primary" size="sm" className="btn-cta-primary">
+              Buscar
+            </Button>
+          </form>
+        </div>
       </div>
 
       {leads.length === 0 ? (

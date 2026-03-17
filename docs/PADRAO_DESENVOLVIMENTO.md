@@ -42,10 +42,17 @@ src/
 │   │       ├── page.tsx    # Redireciona para context ou home
 │   │       ├── context/    # Escolha de tenant
 │   │       ├── home/
-│   │       ├── leads/
+│   │       ├── leads/      # Lista, kanban, [id], [id]/edit
+│   │       ├── contacts/
+│   │       ├── opportunities/
 │   │       ├── conversations/
 │   │       ├── google-ads/
-│   │       └── funnel/
+│   │       ├── funnel/     # + funnel/config
+│   │       ├── products/
+│   │       ├── complaints/
+│   │       ├── onboarding/
+│   │       ├── pagespeed/
+│   │       └── settings/
 │   └── (admin)/            # Grupo: rotas do admin
 │       └── admin/
 │           ├── page.tsx    # Hub (Integrações, Observabilidade, Tenants, Usuários)
@@ -62,6 +69,7 @@ src/
 │   └── tenant-switcher.tsx
 ├── server/                 # Lógica server-side (auth, dashboard, admin, integrations)
 ├── db/                     # Schema Drizzle, migrations
+├── lib/                    # Utilitários (csv, etc.)
 └── middleware.ts
 ```
 

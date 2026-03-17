@@ -73,13 +73,14 @@ export default function NewEvolutionInstancePage() {
             <code className="block max-w-full break-all rounded-lg bg-brand-dark px-3 py-2 text-sm text-brand-neon">
               {created.webhook_url}
             </code>
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={() => navigator.clipboard.writeText(created.webhook_url)}
-              className="rounded-lg border border-brand-border bg-brand-dark px-3 py-2 text-sm text-brand-text hover:bg-brand-border"
             >
               Copiar
-            </button>
+            </Button>
           </div>
           {apiKey && (
             <p className="mt-3 text-xs text-brand-muted">

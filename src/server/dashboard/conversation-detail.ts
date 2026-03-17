@@ -1,5 +1,6 @@
 /**
  * Detalhe de conversa por tenant. Retorna null se a conversa não existir ou não pertencer ao tenant.
+ * Suporta conversas de Evolution e UAZAPI.
  */
 
 import { and, asc, eq } from "drizzle-orm";
@@ -8,6 +9,7 @@ import {
   conversations,
   conversationMessages,
   evolutionInstances,
+  uazapiInstances,
   leads,
 } from "@/db/schema";
 
@@ -49,15 +51,21 @@ export async function getConversationDetailForTenant(
       startedAt: conversations.startedAt,
       lastSyncedAt: conversations.lastSyncedAt,
       leadId: conversations.leadId,
-      instanceName: evolutionInstances.instanceName,
-      instanceExternalId: evolutionInstances.externalId,
+      evolutionInstanceName: evolutionInstances.instanceName,
+      evolutionInstanceExternalId: evolutionInstances.externalId,
+      uazapiInstanceName: uazapiInstances.instanceName,
+      uazapiInstanceExternalId: uazapiInstances.externalId,
       leadName: leads.name,
       leadEmail: leads.email,
     })
     .from(conversations)
-    .innerJoin(
+    .leftJoin(
       evolutionInstances,
       eq(conversations.evolutionInstanceId, evolutionInstances.id)
+    )
+    .leftJoin(
+      uazapiInstances,
+      eq(conversations.uazapiInstanceId, uazapiInstances.id)
     )
     .leftJoin(leads, eq(conversations.leadId, leads.id))
     .where(
@@ -82,16 +90,23 @@ export async function getConversationDetailForTenant(
     .where(eq(conversationMessages.conversationId, conversationId))
     .orderBy(asc(conversationMessages.sentAt));
 
+  const evolutionDisplay =
+    (row.evolutionInstanceName && row.evolutionInstanceName.trim()) ||
+    row.evolutionInstanceExternalId ||
+    "";
+  const uazapiDisplay =
+    (row.uazapiInstanceName && row.uazapiInstanceName.trim()) ||
+    row.uazapiInstanceExternalId ||
+    "";
+  const instanceDisplay = evolutionDisplay || uazapiDisplay || row.id;
+
   return {
     id: row.id,
     externalId: row.externalId,
     status: row.status,
     startedAt: row.startedAt,
     lastSyncedAt: row.lastSyncedAt,
-    instanceDisplay:
-      (row.instanceName && row.instanceName.trim()) ||
-      row.instanceExternalId ||
-      row.id,
+    instanceDisplay,
     leadId: row.leadId,
     leadName: row.leadName,
     leadEmail: row.leadEmail,

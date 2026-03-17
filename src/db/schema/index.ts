@@ -8,6 +8,8 @@ export * from "./app";
 export * from "./integrations";
 export * from "./raw-events";
 export * from "./funnels-leads";
+export * from "./contacts";
 export * from "./conversations";
+export * from "./crm";
 export * from "./snapshots";
 export * from "./ai-alerts-audit";

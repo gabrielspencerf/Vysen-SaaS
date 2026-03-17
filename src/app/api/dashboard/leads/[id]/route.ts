@@ -1,0 +1,109 @@
+/**
+ * PATCH /api/dashboard/leads/[id] — atualiza dados editáveis do lead (tenant da sessão).
+ * Body: { name?, email?, phone?, status? }
+ */
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/server/auth";
+import { updateLeadForTenant } from "@/server/dashboard";
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  let session;
+  try {
+    session = await requireAuth(request);
+  } catch (err) {
+    const e = err as Error & { status?: number };
+    return NextResponse.json(
+      { error: "Não autenticado" },
+      { status: e.status ?? 401 }
+    );
+  }
+
+  const tenantId = session.session.currentTenantId;
+  if (!tenantId) {
+    return NextResponse.json(
+      { error: "Tenant não selecionado" },
+      { status: 400 }
+    );
+  }
+
+  const { id: leadId } = await params;
+  if (!leadId) {
+    return NextResponse.json(
+      { error: "ID do lead é obrigatório" },
+      { status: 400 }
+    );
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Corpo inválido" },
+      { status: 400 }
+    );
+  }
+
+  const name =
+    body.name === null || body.name === undefined
+      ? undefined
+      : typeof body.name === "string"
+        ? body.name
+        : undefined;
+  const email =
+    body.email === null || body.email === undefined
+      ? undefined
+      : typeof body.email === "string"
+        ? body.email
+        : undefined;
+  const phone =
+    body.phone === null || body.phone === undefined
+      ? undefined
+      : typeof body.phone === "string"
+        ? body.phone
+        : undefined;
+  const LEAD_STATUSES = [
+    "new",
+    "contacted",
+    "qualified",
+    "converted",
+    "lost",
+    "duplicate",
+    "bad_lead",
+  ] as const;
+  const statusRaw =
+    body.status === null || body.status === undefined
+      ? undefined
+      : typeof body.status === "string"
+        ? body.status
+        : undefined;
+  const status =
+    statusRaw && LEAD_STATUSES.includes(statusRaw as (typeof LEAD_STATUSES)[number])
+      ? (statusRaw as (typeof LEAD_STATUSES)[number])
+      : undefined;
+
+  const result = await updateLeadForTenant(tenantId, leadId, {
+    name,
+    email,
+    phone,
+    status,
+  });
+
+  if (!result.ok) {
+    if (result.error === "not_found") {
+      return NextResponse.json(
+        { error: "Lead não encontrado" },
+        { status: 404 }
+      );
+    }
+    return NextResponse.json(
+      { error: "Conflito: e-mail ou telefone já usado por outro lead" },
+      { status: 409 }
+    );
+  }
+
+  return NextResponse.json({ ok: true });
+}

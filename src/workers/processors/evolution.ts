@@ -3,7 +3,7 @@
  * Carrega raw event por id; atualiza processed_at (ou processing_error em falha).
  * Idempotente: upsert conversation por (tenant_id, evolution_instance_id, external_id);
  * mensagens dedup por (conversation_id, external_id).
- * Event types suportados nesta versão: messages.upsert (e alias MESSAGES_UPSERT).
+ * Mensagens de áudio são transcritas via OpenAI Whisper e imagens descritas via Vision (OPENAI_API_KEY).
  */
 
 import { and, eq } from "drizzle-orm";
@@ -12,15 +12,20 @@ import {
   evolutionWebhookEvents,
   conversations,
   conversationMessages,
+  evolutionInstances,
 } from "@/db/schema";
 import type { JobProcessEvolutionRaw } from "../queue/types";
+import { getEvolutionInstanceSecret } from "@/server/integrations/evolution/credentials";
+import { fetchEvolutionMediaAsBuffer } from "@/server/integrations/evolution/fetch-media";
+import { transcribe } from "@/server/integrations/openai/transcribe";
+import { describeImage } from "@/server/integrations/openai/describe-image";
 
 const CONVERSATION_STATUS_OPEN = "open";
 
-/** Event types que geram conversa/mensagem na primeira versão. */
+/** Event types que geram conversa/mensagem. eventType é normalizado: minúsculas, _ → . */
 const SUPPORTED_MESSAGE_EVENTS = new Set([
   "messages.upsert",
-  "MESSAGES_UPSERT",
+  "send.message",
 ]);
 
 function stringOrNull(v: unknown): string | null {
@@ -37,39 +42,71 @@ function numberOrNull(v: unknown): number | null {
   return null;
 }
 
+export type ParsedMessageContentType = "text" | "audio" | "image";
+
 /**
- * Extrai dados da mensagem do payload Evolution (evento messages.upsert).
- * data.key: { remoteJid, fromMe, id }; data.message: { conversation?, extendedTextMessage? }; data.messageTimestamp.
+ * Extrai dados da mensagem do payload Evolution (evento messages.upsert / send.message).
+ * Detecta texto (conversation, extendedTextMessage), áudio (audioMessage) e imagem (imageMessage).
  */
 function parseMessagesUpsert(
   payload: Record<string, unknown>
-): { remoteJid: string; fromMe: boolean; messageId: string; text: string | null; messageTimestamp: number } | null {
-  const data = payload.data as Record<string, unknown> | undefined;
+): {
+  remoteJid: string;
+  fromMe: boolean;
+  messageId: string;
+  contentType: ParsedMessageContentType;
+  contentText: string | null;
+  messageTimestamp: number;
+} | null {
+  const data = (payload.data ?? payload) as Record<string, unknown>;
   if (!data || typeof data !== "object") return null;
 
   const key = data.key as Record<string, unknown> | undefined;
   if (!key || typeof key !== "object") return null;
 
-  const remoteJid = stringOrNull(key.remoteJid);
-  const messageId = stringOrNull(key.id);
+  const remoteJid =
+    stringOrNull(key.remoteJid) ??
+    stringOrNull(payload.remoteJid) ??
+    stringOrNull(data.remoteJid);
+  const messageId =
+    stringOrNull(key.id) ?? stringOrNull(key.messageId);
   if (!remoteJid || !messageId) return null;
 
   const fromMe = key.fromMe === true;
 
-  const message = data.message as Record<string, unknown> | undefined;
-  let text: string | null = null;
-  if (message && typeof message === "object") {
-    text =
-      stringOrNull(message.conversation) ??
-      (message.extendedTextMessage && typeof message.extendedTextMessage === "object"
-        ? stringOrNull((message.extendedTextMessage as Record<string, unknown>).text)
-        : null);
+  const message = data.message;
+  let contentType: ParsedMessageContentType = "text";
+  let contentText: string | null = null;
+
+  if (typeof message === "string" && message.trim()) {
+    contentText = message.trim();
+  } else if (message && typeof message === "object") {
+    const msg = message as Record<string, unknown>;
+    if (msg.audioMessage && typeof msg.audioMessage === "object") {
+      contentType = "audio";
+      const audio = msg.audioMessage as Record<string, unknown>;
+      contentText = stringOrNull(audio.caption) ?? null;
+    } else if (msg.imageMessage && typeof msg.imageMessage === "object") {
+      contentType = "image";
+      const img = msg.imageMessage as Record<string, unknown>;
+      contentText = stringOrNull(img.caption) ?? null;
+    } else {
+      contentText =
+        stringOrNull(msg.conversation) ??
+        (msg.extendedTextMessage && typeof msg.extendedTextMessage === "object"
+          ? stringOrNull((msg.extendedTextMessage as Record<string, unknown>).text)
+          : null) ??
+        stringOrNull(msg.text);
+    }
   }
 
-  const ts = numberOrNull(data.messageTimestamp) ?? numberOrNull(payload.messageTimestamp);
+  const ts =
+    numberOrNull(data.messageTimestamp) ??
+    numberOrNull(payload.messageTimestamp) ??
+    numberOrNull(data.messageTimestamp);
   const messageTimestamp = ts ?? Math.floor(Date.now() / 1000);
 
-  return { remoteJid, fromMe, messageId, text, messageTimestamp };
+  return { remoteJid, fromMe, messageId, contentType, contentText, messageTimestamp };
 }
 
 export async function processEvolutionRaw(
@@ -114,8 +151,11 @@ async function processEvolutionRawInner(
 
   const eventType = raw.eventType;
   const payload = raw.payload as Record<string, unknown>;
+  const normalizedEvent = (eventType ?? "")
+    .toLowerCase()
+    .replace(/_/g, ".");
 
-  if (!SUPPORTED_MESSAGE_EVENTS.has(eventType)) {
+  if (!SUPPORTED_MESSAGE_EVENTS.has(normalizedEvent)) {
     await db
       .update(evolutionWebhookEvents)
       .set({ processedAt: new Date() })
@@ -135,7 +175,7 @@ async function processEvolutionRawInner(
     return { error: "Invalid messages.upsert payload" };
   }
 
-  const { remoteJid, fromMe, messageId, text, messageTimestamp } = parsed;
+  const { remoteJid, fromMe, messageId, contentType, contentText, messageTimestamp } = parsed;
   const sentAt = new Date(messageTimestamp * 1000);
   const now = new Date();
 
@@ -195,16 +235,46 @@ async function processEvolutionRawInner(
     .limit(1);
 
   if (!existingMsg) {
-    await db.insert(conversationMessages).values({
-      tenantId,
-      conversationId,
-      externalId: messageId,
-      direction: fromMe ? "out" : "in",
-      contentType: "text",
-      contentText: text,
-      payload: payload,
-      sentAt,
-    });
+    const [insertedMsg] = await db
+      .insert(conversationMessages)
+      .values({
+        tenantId,
+        conversationId,
+        externalId: messageId,
+        direction: fromMe ? "out" : "in",
+        contentType,
+        contentText: contentText,
+        payload: payload,
+        sentAt,
+      })
+      .returning({ id: conversationMessages.id });
+
+    if (insertedMsg && contentType === "audio") {
+      const transcript = await tryTranscribeAudio(db, evolutionInstanceId, messageId);
+      if (transcript) {
+        await db
+          .update(conversationMessages)
+          .set({
+            contentText: contentText?.trim()
+              ? `${contentText.trim()}\n\n— Transcrição: ${transcript}`
+              : transcript,
+          })
+          .where(eq(conversationMessages.id, insertedMsg.id));
+      }
+    }
+    if (insertedMsg && contentType === "image") {
+      const description = await tryDescribeImage(db, evolutionInstanceId, messageId);
+      if (description) {
+        await db
+          .update(conversationMessages)
+          .set({
+            contentText: contentText?.trim()
+              ? `${contentText.trim()}\n\n— Descrição: ${description}`
+              : description,
+          })
+          .where(eq(conversationMessages.id, insertedMsg.id));
+      }
+    }
   }
 
   await db
@@ -213,4 +283,55 @@ async function processEvolutionRawInner(
     .where(eq(evolutionWebhookEvents.id, rawEventId));
 
   return { ok: true };
+}
+
+/**
+ * Busca o áudio na Evolution, transcreve via Whisper e retorna o texto (ou null).
+ */
+async function tryTranscribeAudio(
+  db: ReturnType<typeof getDb>,
+  evolutionInstanceId: string,
+  messageId: string
+): Promise<string | null> {
+  const media = await fetchEvolutionMediaForInstance(db, evolutionInstanceId, messageId);
+  if (!media) return null;
+  return transcribe(media.buffer, media.mimeType) ?? null;
+}
+
+/**
+ * Busca a imagem na Evolution, descreve via OpenAI Vision e retorna o texto (ou null).
+ */
+async function tryDescribeImage(
+  db: ReturnType<typeof getDb>,
+  evolutionInstanceId: string,
+  messageId: string
+): Promise<string | null> {
+  const media = await fetchEvolutionMediaForInstance(db, evolutionInstanceId, messageId);
+  if (!media) return null;
+  return describeImage(media.buffer, media.mimeType) ?? null;
+}
+
+async function fetchEvolutionMediaForInstance(
+  db: ReturnType<typeof getDb>,
+  evolutionInstanceId: string,
+  messageId: string
+): Promise<{ buffer: Buffer; mimeType?: string } | null> {
+  const [instance] = await db
+    .select({
+      baseUrl: evolutionInstances.baseUrl,
+      externalId: evolutionInstances.externalId,
+    })
+    .from(evolutionInstances)
+    .where(eq(evolutionInstances.id, evolutionInstanceId))
+    .limit(1);
+
+  if (!instance) return null;
+
+  const apiKey = await getEvolutionInstanceSecret(evolutionInstanceId);
+  return fetchEvolutionMediaAsBuffer({
+    baseUrl: instance.baseUrl,
+    instanceName: instance.externalId,
+    apiKey,
+    messageId,
+  });
 }
