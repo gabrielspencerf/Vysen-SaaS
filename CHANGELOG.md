@@ -2,6 +2,15 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.2.1] - 2025-03-17
+
+### Alterado
+
+- Nova tag de release com todas as atualizações consolidadas (package 0.2.1).
+- Estrutura e documentação revisadas para o release.
+
+---
+
 ## [0.2.0] - 2025-03-17
 
 ### Adicionado
@@ -44,5 +53,6 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 - Áreas: landing, login, admin-login, dashboard (home, leads, conversas, Google Ads, funil), admin (integrations, observability, tenants, users).
 - Design system CL (brand, sidebar ZincMail, layout Aura).
 
+[0.2.1]: https://github.com/gabrielspencerf/observabilidade-saas/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/gabrielspencerf/observabilidade-saas/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/gabrielspencerf/observabilidade-saas/releases/tag/v0.1.0
