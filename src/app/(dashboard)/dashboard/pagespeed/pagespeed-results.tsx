@@ -4,8 +4,8 @@ type ResultWithScore = {
   id: string;
   url: string;
   strategy: string;
-  metricDate: Date;
-  fetchedAt: Date;
+  metricDate: Date | string;
+  fetchedAt: Date | string;
   score: number | null;
 };
 
@@ -42,7 +42,7 @@ export function PageSpeedResults({
         <tbody>
           {results.map((r) => (
             <tr key={r.id} className="border-b border-brand-border/50">
-              <td className="py-2 pr-4 text-brand-text">{formatDate(r.metricDate)}</td>
+              <td className="py-2 pr-4 text-brand-text">{formatDate(new Date(r.metricDate))}</td>
               <td className="py-2 pr-4 text-brand-text">
                 {r.strategy === "mobile" ? "Mobile" : "Desktop"}
               </td>
