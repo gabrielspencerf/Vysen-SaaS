@@ -52,9 +52,12 @@ export default async function AdminTenantDetailPage({
               {tenant.isActive ? "Ativo" : "Inativo"}
             </span>
           </div>
-          <Button asChild variant="secondary" className="border-brand-border text-brand-text">
-            <Link href={`/admin/tenants/${id}/edit`}>Editar</Link>
-          </Button>
+          <Link
+            href={`/admin/tenants/${id}/edit`}
+            className="inline-flex items-center justify-center gap-2 rounded-md border border-brand-border bg-transparent px-5 py-2.5 text-sm font-medium text-brand-text hover:bg-brand-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-muted"
+          >
+            Editar
+          </Link>
         </div>
       </PageSection>
 

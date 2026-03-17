@@ -4,7 +4,6 @@ import { PageSection } from "@/components/layout/page-section";
 import { ListTableHeader } from "@/components/layout/list-table-header";
 import { ListRowCard } from "@/components/layout/list-row-card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Button } from "@/components/ui/button";
 
 export default async function AdminTenantsPage() {
   const tenants = await listTenants();
@@ -12,9 +11,9 @@ export default async function AdminTenantsPage() {
     <PageSection variant="plain" className="px-1 py-0 sm:px-2 md:px-2 md:pt-0 md:pb-0">
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-brand-text">Tenants</h1>
-        <Button asChild className="btn-cta-primary text-sm">
-          <Link href="/admin/tenants/new">Novo tenant</Link>
-        </Button>
+        <Link href="/admin/tenants/new" className="btn-cta-primary inline-flex text-sm">
+          Novo tenant
+        </Link>
       </div>
 
       {tenants.length === 0 ? (
@@ -22,9 +21,9 @@ export default async function AdminTenantsPage() {
           title="Nenhum tenant cadastrado"
           description="Você ainda não possui tenants. Crie o primeiro tenant para começar."
           action={
-            <Button asChild className="btn-cta-primary mt-2">
-              <Link href="/admin/tenants/new">Criar Tenant</Link>
-            </Button>
+            <Link href="/admin/tenants/new" className="btn-cta-primary mt-2 inline-flex">
+              Criar Tenant
+            </Link>
           }
         />
       ) : (

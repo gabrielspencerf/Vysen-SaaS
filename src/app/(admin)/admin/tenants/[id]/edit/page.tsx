@@ -159,9 +159,12 @@ export default function EditTenantPage() {
           >
             {submitting ? "Salvando…" : "Salvar"}
           </Button>
-          <Button asChild variant="secondary" className="border-brand-border text-brand-text hover:bg-brand-surface">
-            <Link href={`/admin/tenants/${id}`}>Cancelar</Link>
-          </Button>
+          <Link
+            href={`/admin/tenants/${id}`}
+            className="inline-flex items-center justify-center gap-2 rounded-md border border-brand-border bg-transparent px-5 py-2.5 text-sm font-medium text-brand-text hover:bg-brand-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-muted disabled:opacity-50"
+          >
+            Cancelar
+          </Link>
         </div>
       </form>
     </PageSection>

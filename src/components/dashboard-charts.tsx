@@ -59,9 +59,10 @@ const mockAdsData = [
   { name: "Semana 4", gasto: 620, cliques: 2100 },
 ];
 
-const tooltipContentStyle = (
-  t: (typeof CHART_THEME)["light"]["tooltip"]
-) => ({
+type TooltipTheme =
+  | (typeof CHART_THEME)["light"]["tooltip"]
+  | (typeof CHART_THEME)["dark"]["tooltip"];
+const tooltipContentStyle = (t: TooltipTheme) => ({
   backgroundColor: t.bg,
   border: `1px solid ${t.border}`,
   borderRadius: 14,
@@ -135,7 +136,7 @@ export function LeadsChart() {
             contentStyle={tooltipContentStyle(t)}
             labelStyle={{ color: t.text, fontWeight: 600, marginBottom: 4 }}
             itemStyle={{ color: t.text }}
-            formatter={(value: number) => [formatLeads(value), "Leads"]}
+            formatter={(value: unknown) => [formatLeads(Number(value ?? 0)), "Leads"]}
             labelFormatter={(label) => label}
           />
           <Bar
@@ -207,7 +208,7 @@ export function AdsSpendChart() {
             contentStyle={tooltipContentStyle(t)}
             labelStyle={{ color: t.text, fontWeight: 600, marginBottom: 4 }}
             itemStyle={{ color: t.text }}
-            formatter={(value: number) => [formatGasto(value), "Gasto"]}
+            formatter={(value: unknown) => [formatGasto(Number(value ?? 0)), "Gasto"]}
             labelFormatter={(label) => label}
             cursor={false}
           />
