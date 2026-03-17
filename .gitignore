@@ -14,6 +14,10 @@
 stack.env
 /pgdata
 
+# Docker stack (deploy local/Portainer; não versionar para evitar vazar chaves)
+docker-stack.swarm.yml
+docker-stack.swarm.app-only.yml
+
 # Debug / logs
 npm-debug.log*
 yarn-debug.log*
