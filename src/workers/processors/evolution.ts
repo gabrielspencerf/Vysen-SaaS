@@ -293,9 +293,13 @@ async function tryTranscribeAudio(
   evolutionInstanceId: string,
   messageId: string
 ): Promise<string | null> {
-  const media = await fetchEvolutionMediaForInstance(db, evolutionInstanceId, messageId);
+  const media = await fetchEvolutionMediaForInstance(
+    db,
+    evolutionInstanceId,
+    messageId
+  );
   if (!media) return null;
-  return transcribe(media.buffer, media.mimeType) ?? null;
+  return transcribe(new Uint8Array(media.buffer), media.mimeType) ?? null;
 }
 
 /**

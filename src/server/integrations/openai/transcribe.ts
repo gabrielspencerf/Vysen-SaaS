@@ -17,7 +17,7 @@ export interface TranscribeResult {
  * @returns Texto transcrito ou null se chave ausente, falha de rede ou áudio inválido.
  */
 export async function transcribe(
-  audioBuffer: Buffer,
+  audioBuffer: Uint8Array,
   mimeType?: string
 ): Promise<string | null> {
   if (!OPENAI_API_KEY || OPENAI_API_KEY.length < 10) {
@@ -36,8 +36,7 @@ export async function transcribe(
   const filename = `audio.${ext}`;
 
   const form = new FormData();
-  const blobPart = audioBuffer instanceof Buffer ? new Uint8Array(audioBuffer) : audioBuffer;
-  form.append("file", new Blob([blobPart], { type: mimeType ?? "audio/ogg" }), filename);
+  form.append("file", new Blob([audioBuffer], { type: mimeType ?? "audio/ogg" }), filename);
   form.append("model", "whisper-1");
   form.append("response_format", "text");
 
