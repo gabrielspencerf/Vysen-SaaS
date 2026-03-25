@@ -39,7 +39,7 @@
     "clsx": "^2.1.1",
     "dotenv": "^16.4.5",
     "drizzle-kit": "^0.31.10",
-    "drizzle-orm": "^0.31.0",
+    "drizzle-orm": "^0.45.1",
     "ioredis": "^5.4.1",
     "lucide-react": "^0.460.0",
     "next": "^15.5.14",
