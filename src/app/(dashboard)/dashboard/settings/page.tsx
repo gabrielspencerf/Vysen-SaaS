@@ -5,6 +5,8 @@ import Link from "next/link";
 import { PageSection } from "@/components/layout";
 import { Button, Input, Card, CardContent } from "@/components/ui";
 import { CompanyFilesSection } from "./company-files-section";
+import { AuditLogSection } from "./audit-log-section";
+import { ProfileAvatarSection } from "./profile-avatar-section";
 import { Settings, Smartphone } from "lucide-react";
 
 interface ProfilePayload {
@@ -96,6 +98,11 @@ export default function DashboardSettingsPage() {
         return;
       }
       setSuccess("Perfil atualizado com sucesso.");
+      window.dispatchEvent(
+        new CustomEvent("vysen-profile-updated", {
+          detail: { name: name.trim() || null },
+        })
+      );
       setProfile((prev) =>
         prev
           ? {
@@ -142,6 +149,16 @@ export default function DashboardSettingsPage() {
             Atualize os dados do perfil e preferências da conta.
           </p>
         </div>
+        <Button
+          type="button"
+          variant="secondary"
+          className="border-brand-border"
+          onClick={() =>
+            window.dispatchEvent(new CustomEvent("vysen-open-first-access-guide"))
+          }
+        >
+          Ver guia de boas-vindas
+        </Button>
       </div>
 
       <Card className="mt-6 border-brand-border bg-brand-surface">
@@ -178,6 +195,25 @@ export default function DashboardSettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {profile && (
+        <ProfileAvatarSection
+          displayName={name || profile.name || ""}
+          email={profile.email}
+          avatarUrl={profile.avatarUrl}
+          onAvatarChange={(nextUrl) =>
+            setProfile((prev) => (prev ? { ...prev, avatarUrl: nextUrl } : prev))
+          }
+          onError={(message) => {
+            setError(message);
+            setSuccess(null);
+          }}
+          onSuccess={(message) => {
+            setSuccess(message);
+            setError(null);
+          }}
+        />
+      )}
 
       <Card className="mt-6 border-brand-border bg-brand-surface">
         <CardContent className="p-6">
@@ -373,6 +409,7 @@ export default function DashboardSettingsPage() {
       </Card>
 
       <CompanyFilesSection />
+      <AuditLogSection />
     </PageSection>
   );
 }

@@ -4,6 +4,10 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/server/db";
 import { tenants } from "@/db/schema";
+import {
+  mergeTenantFeatureFlagsInSettings,
+  normalizeTenantFeatureFlags,
+} from "@/server/tenancy/tenant-features";
 
 export interface TenantRow {
   id: string;
@@ -18,6 +22,7 @@ export interface TenantRow {
 export interface CreateTenantInput {
   name: string;
   slug: string;
+  settings?: Record<string, unknown> | null;
 }
 
 export interface UpdateTenantInput {
@@ -25,6 +30,15 @@ export interface UpdateTenantInput {
   slug?: string;
   isActive?: boolean;
   settings?: Record<string, unknown> | null;
+}
+
+function normalizeTenantSettingsInput(
+  settings: Record<string, unknown> | null | undefined
+): Record<string, unknown> | null {
+  if (settings === null) return null;
+  const baseSettings: Record<string, unknown> = settings ? { ...settings } : {};
+  const featureFlags = normalizeTenantFeatureFlags(baseSettings);
+  return mergeTenantFeatureFlagsInSettings(baseSettings, featureFlags);
 }
 
 export async function listTenants(): Promise<TenantRow[]> {
@@ -68,6 +82,7 @@ export async function createTenant(
   const db = getDb();
   const name = input.name?.trim() ?? "";
   const slug = (input.slug?.trim() ?? "").toLowerCase().replace(/\s+/g, "-");
+  const settings = normalizeTenantSettingsInput(input.settings);
   if (!name || !slug) {
     return { error: "Nome e slug são obrigatórios" };
   }
@@ -81,6 +96,7 @@ export async function createTenant(
         name,
         slug,
         isActive: true,
+        settings,
       })
       .returning({ id: tenants.id });
     if (!inserted) return { error: "Falha ao criar tenant" };
@@ -109,6 +125,7 @@ export async function updateTenant(
       : existing.slug;
   const isActive = input.isActive !== undefined ? input.isActive : existing.isActive;
   const settings = input.settings !== undefined ? input.settings : existing.settings;
+  const normalizedSettings = normalizeTenantSettingsInput(settings);
 
   if (!name || !slug) return { error: "Nome e slug são obrigatórios" };
   if (slug.length > 64) return { error: "Slug muito longo" };
@@ -119,7 +136,7 @@ export async function updateTenant(
       .set({
         name,
         slug,
-        settings,
+        settings: normalizedSettings,
         isActive,
         updatedAt: new Date(),
       })

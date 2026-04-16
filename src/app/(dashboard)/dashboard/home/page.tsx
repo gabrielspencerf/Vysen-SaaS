@@ -111,7 +111,10 @@ export default async function DashboardHomePage({
 
         {/* Gráficos principais */}
         <div className="mt-8 grid gap-8 lg:grid-cols-2 mb-8">
-          <div className="panel-lux rounded-xl border border-brand-border bg-brand-surface p-5 shadow-sm hover-lift">
+          <div
+            data-vysen-context={`Gráfico de captura de leads. Período atual ${summary.periodDays} dias. Total de leads: ${summary.totalLeads}.`}
+            className="panel-lux rounded-xl border border-brand-border bg-brand-surface p-5 shadow-sm hover-lift"
+          >
             <span className="section-eyebrow mb-2">captação</span>
             <div className="flex items-center gap-2 mb-2">
               <Users className="h-5 w-5 text-brand-neon" />
@@ -120,7 +123,10 @@ export default async function DashboardHomePage({
             <p className="text-sm text-brand-muted">Evolução de novos leads na última semana</p>
             <LeadsChart data={summary.leadsByDay} />
           </div>
-          <div className="panel-lux rounded-xl border border-brand-border bg-brand-surface p-5 shadow-sm hover-lift">
+          <div
+            data-vysen-context={`Gráfico de investimento em Ads. Período atual ${summary.periodDays} dias. Spend total: ${formatCurrency(adsPeriodTotals.spend)}. Cliques: ${formatNumber(adsPeriodTotals.clicks)}.`}
+            className="panel-lux rounded-xl border border-brand-border bg-brand-surface p-5 shadow-sm hover-lift"
+          >
             <span className="section-eyebrow mb-2">investimento</span>
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="h-5 w-5 text-brand-neon" />

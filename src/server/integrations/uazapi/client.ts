@@ -374,7 +374,7 @@ function buildHttpDetails(
       statusText,
       errorType: "endpoint_not_found",
       bodyPreview,
-      hint: "Endpoint de health nao encontrado. Valide base URL e rotas disponiveis da UAZAPI.",
+      hint: "Endpoint de health não encontrado. Valide base URL e rotas disponíveis da UAZAPI.",
     };
   }
   if (statusCode === 401 || statusCode === 403) {
@@ -386,7 +386,7 @@ function buildHttpDetails(
       statusText,
       errorType: "auth",
       bodyPreview,
-      hint: "Falha de autenticacao na UAZAPI. Verifique credencial da instancia (apikey ou token/admintoken) e permissoes.",
+      hint: "Falha de autenticação na UAZAPI. Verifique credencial da instância (apikey ou token/admintoken) e permissões.",
     };
   }
   if (statusCode >= 500) {
@@ -409,7 +409,7 @@ function buildHttpDetails(
     statusText,
     errorType: "http_error",
     bodyPreview,
-    hint: "Resposta HTTP inesperada no health check. Revise endpoint e configuracao.",
+    hint: "Resposta HTTP inesperada no health check. Revise endpoint e configuração.",
   };
 }
 

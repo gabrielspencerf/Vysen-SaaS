@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Login",
-  description: "Acesse sua conta para visualizar dados e operacoes no dashboard.",
+  description: "Acesse sua conta para visualizar dados e operações no dashboard.",
   robots: {
     index: false,
     follow: false,

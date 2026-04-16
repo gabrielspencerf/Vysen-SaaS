@@ -7,8 +7,9 @@ import { createEvolutionInstance } from "@/server/admin/integrations-create";
 import { checkRateLimit } from "@/server/security/rate-limit";
 
 export async function POST(request: NextRequest) {
+  let session;
   try {
-    await requireAdmin(request);
+    session = await requireAdmin(request);
   } catch (err) {
     const e = err as Error & { status?: number };
     return NextResponse.json(
@@ -62,6 +63,7 @@ export async function POST(request: NextRequest) {
     baseUrl,
     apiKey: body.api_key ?? null,
     instanceName: body.instance_name ?? null,
+    actorUserId: session.user.id,
   });
 
   if ("error" in result) {

@@ -12,7 +12,18 @@ import {
   type WorkerPipelineDef,
 } from "@/server/admin/worker-pipeline";
 import { RelationalArchitectureDiagram } from "@/components/admin/relational-architecture-diagram";
-import { ArrowRight, Cable, CheckCircle2, Clock3, Database, Radio, Server, XCircle } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowRight,
+  Cable,
+  CheckCircle2,
+  Clock3,
+  Database,
+  ListTree,
+  Radio,
+  Server,
+  XCircle,
+} from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Worker e fluxo de dados",
@@ -105,14 +116,14 @@ function PipelineCard({
                       {step.title}
                     </span>
                   </div>
-                  <p className="mt-1 break-words font-mono text-[11px] leading-snug text-brand-text">{step.detail}</p>
+                  <p className="mt-1 break-words font-mono text-xs leading-snug text-brand-text">{step.detail}</p>
                   {pending !== undefined && pending > 0 ? (
-                    <p className="mt-1.5 text-[11px] text-amber-600 dark:text-amber-400">
+                    <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
                       {pending} pendente(s) na tabela (sem processed_at)
                     </p>
                   ) : null}
                   {qd ? (
-                    <p className="mt-1 text-[11px] text-brand-muted">
+                    <p className="mt-1 text-xs text-brand-muted">
                       Redis: {qd.main} aguardando · DLQ {qd.dlq}
                     </p>
                   ) : null}
@@ -120,6 +131,11 @@ function PipelineCard({
                 {idx < pipeline.steps.length - 1 ? (
                   <div className="hidden items-center text-brand-muted lg:flex" aria-hidden>
                     <ArrowRight className="h-4 w-4 shrink-0 opacity-50" />
+                  </div>
+                ) : null}
+                {idx < pipeline.steps.length - 1 ? (
+                  <div className="flex items-center justify-center text-brand-muted lg:hidden" aria-hidden>
+                    <ArrowDown className="h-4 w-4 shrink-0 opacity-60" />
                   </div>
                 ) : null}
               </div>
@@ -162,8 +178,25 @@ export default async function AdminWorkerPipelinePage() {
             </Link>
           }
         />
+        <nav className="mb-8 mt-6 rounded-2xl border border-brand-border bg-brand-surface/35 p-4" aria-label="Atalhos da página">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-brand-text">
+            <ListTree className="h-4 w-4 text-brand-neon" />
+            Navegação rápida
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs">
+            <Link href="#mapa-relacional" className="rounded-full border border-brand-border px-3 py-1.5 text-brand-muted hover:text-brand-text">
+              Mapa relacional
+            </Link>
+            <Link href="#metricas-rapidas" className="rounded-full border border-brand-border px-3 py-1.5 text-brand-muted hover:text-brand-text">
+              Métricas rápidas
+            </Link>
+            <Link href="#pipelines-filas" className="rounded-full border border-brand-border px-3 py-1.5 text-brand-muted hover:text-brand-text">
+              Pipelines e filas
+            </Link>
+          </div>
+        </nav>
 
-        <section className="mb-12" aria-labelledby="relational-map-heading">
+        <section id="mapa-relacional" className="mb-12 scroll-mt-24" aria-labelledby="relational-map-heading">
           <p className="text-xs font-semibold uppercase tracking-wider text-brand-muted">Arquitetura</p>
           <h2 id="relational-map-heading" className="mt-1 text-lg font-semibold text-brand-text">
             Mapa relacional
@@ -172,18 +205,23 @@ export default async function AdminWorkerPipelinePage() {
             Domínios principais do schema e convergência para o núcleo (worker + Redis + Postgres). Listas
             espelham tabelas reais; linhas tracejadas indicam fluxo de dados e escopo multi-tenant.
           </p>
-          <div className="mt-5">
-            <RelationalArchitectureDiagram
-              hubStats={{
-                backlogTotal: snapshot.backlogTotal,
-                dlqTotal: snapshot.dlqTotal,
-                workerOk,
-              }}
-            />
-          </div>
+          <details className="mt-5 rounded-2xl border border-brand-border bg-brand-surface/25 p-3" open>
+            <summary className="cursor-pointer text-sm font-medium text-brand-text">
+              Exibir/ocultar diagrama relacional
+            </summary>
+            <div className="mt-3">
+              <RelationalArchitectureDiagram
+                hubStats={{
+                  backlogTotal: snapshot.backlogTotal,
+                  dlqTotal: snapshot.dlqTotal,
+                  workerOk,
+                }}
+              />
+            </div>
+          </details>
         </section>
 
-        <div className="border-t border-brand-border pt-10">
+        <div id="metricas-rapidas" className="scroll-mt-24 border-t border-brand-border pt-10">
           <p className="text-xs font-semibold uppercase tracking-wider text-brand-muted">Saúde em tempo real</p>
           <h2 className="mt-1 text-lg font-semibold text-brand-text">Métricas rápidas</h2>
           <p className="mt-1 max-w-3xl text-sm text-brand-muted">
@@ -261,7 +299,7 @@ export default async function AdminWorkerPipelinePage() {
           </p>
         </div>
 
-        <div className="mt-12 space-y-10 border-t border-brand-border pt-10">
+        <div id="pipelines-filas" className="mt-12 space-y-10 scroll-mt-24 border-t border-brand-border pt-10">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-brand-muted">Detalhe operacional</p>
             <h2 className="mt-1 text-lg font-semibold text-brand-text">Pipelines e filas</h2>

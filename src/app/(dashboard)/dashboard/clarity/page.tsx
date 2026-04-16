@@ -5,9 +5,9 @@ import {
 } from "@/server/dashboard";
 import { DashboardPageHeader } from "@/components/layout";
 import { PageSection } from "@/components/layout";
-import { Eye } from "lucide-react";
 import { env } from "@/config/env";
 import { ClarityConnectionActions, NewClarityConnectionForm } from "./clarity-client";
+import { ProviderBrandIcon } from "@/components/provider-brand-icon";
 
 function formatDate(d: Date | null): string {
   if (!d) return "—";
@@ -30,7 +30,13 @@ export default async function DashboardClarityPage({
   return (
     <div className="space-y-8">
       <DashboardPageHeader
-        icon={Eye}
+        iconNode={
+          <ProviderBrandIcon
+            provider="clarity"
+            variant="plain"
+            className="brand-icon-monochrome h-4 w-4"
+          />
+        }
         title="Microsoft Clarity"
         description="Conecte seu projeto para acompanhar insights de comportamento dos visitantes."
       />

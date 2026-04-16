@@ -8,10 +8,18 @@ import type { SidebarInsightsPayload } from "@/types/sidebar-insights";
 interface DashboardMobileHeaderProps {
   userEmail: string;
   userName?: string | null;
+  userAvatarUrl?: string | null;
+  showAdminLink?: boolean;
   insights: SidebarInsightsPayload;
 }
 
-export function DashboardMobileHeader({ userEmail, userName, insights }: DashboardMobileHeaderProps) {
+export function DashboardMobileHeader({
+  userEmail,
+  userName,
+  userAvatarUrl,
+  showAdminLink = false,
+  insights,
+}: DashboardMobileHeaderProps) {
   return (
     <MobileSidebarDrawer
       menuAriaLabel="Abrir menu do dashboard"
@@ -20,6 +28,8 @@ export function DashboardMobileHeader({ userEmail, userName, insights }: Dashboa
       <DashboardSidebar
         userEmail={userEmail}
         userName={userName}
+        userAvatarUrl={userAvatarUrl}
+        showAdminLink={showAdminLink}
         insights={insights}
         hideNotificationBell
       />

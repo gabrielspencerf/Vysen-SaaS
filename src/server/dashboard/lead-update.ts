@@ -5,13 +5,12 @@
 import { and, eq } from "drizzle-orm";
 import { getDb } from "@/server/db";
 import { leads } from "@/db/schema";
-import { notifyTenantUsers } from "@/server/notifications/internal";
 import {
   completeFollowupTasksForLead,
   ensureFollowupTaskForLead,
 } from "@/server/followup/engine";
 import { enqueueDueFollowupsForTenant } from "@/server/followup/enqueue-due-followups";
-import { writeAuditLog } from "@/server/audit/log";
+import { recordTenantActivity } from "@/server/tenancy/tenant-activity";
 
 const LEAD_STATUSES = [
   "new",
@@ -105,25 +104,38 @@ export async function updateLeadForTenant(
       .set(updates)
       .where(and(eq(leads.tenantId, tenantId), eq(leads.id, leadId)));
 
-    await writeAuditLog({
+    await recordTenantActivity({
       tenantId,
-      userId: input.actorUserId ?? null,
+      actorUserId: input.actorUserId ?? null,
+      scope: "products_leads",
       action: "update",
+      notificationType: "lead_updated",
+      title: "Lead atualizado",
+      message: `Lead ${existing.name ?? existing.email ?? leadId} foi atualizado.`,
       resourceType: "lead",
       resourceId: leadId,
       oldValues: {
         status: existing.status,
       },
       newValues: updates,
+      metadata: {
+        leadId,
+      },
     });
 
     if (updates.status && updates.status !== existing.status) {
-      await notifyTenantUsers(tenantId, {
-        type: "lead_status_changed",
+      await recordTenantActivity({
+        tenantId,
+        actorUserId: input.actorUserId ?? null,
+        scope: "products_leads",
+        action: "update",
+        notificationType: "lead_status_changed",
         title: "Status de lead atualizado",
         message: `Lead ${existing.name ?? existing.email ?? leadId} mudou de ${existing.status} para ${updates.status}.`,
         resourceType: "lead",
         resourceId: leadId,
+        oldValues: { status: existing.status },
+        newValues: { status: updates.status },
         metadata: {
           oldStatus: existing.status,
           newStatus: updates.status,

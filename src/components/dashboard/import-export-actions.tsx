@@ -203,7 +203,7 @@ export function ImportExportActions({
                 type="button"
                 onClick={closeImportModal}
                 className="rounded-md p-1 text-brand-muted hover:bg-brand-dark hover:text-brand-text"
-                aria-label="Fechar modal de importacao"
+                aria-label="Fechar modal de importação"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -290,7 +290,7 @@ export function ImportExportActions({
                 type="button"
                 onClick={closeExportModal}
                 className="rounded-md p-1 text-brand-muted hover:bg-brand-dark hover:text-brand-text"
-                aria-label="Fechar modal de exportacao"
+                aria-label="Fechar modal de exportação"
               >
                 <X className="h-4 w-4" />
               </button>

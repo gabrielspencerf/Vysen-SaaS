@@ -2,6 +2,7 @@
  * Aguarda PostgreSQL aceitar conexões (Swarm: app_setup sobe antes do postgres).
  * Uso: DATABASE_URL definida; node scripts/wait-for-db.js
  */
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const postgres = require("postgres");
 
 const url = process.env.DATABASE_URL;

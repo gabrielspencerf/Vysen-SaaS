@@ -48,6 +48,7 @@ export async function PATCH(
 ) {
   const authError = await ensureAdmin(request);
   if (authError) return authError;
+  const adminSession = await requireAdmin(request);
 
   const { id } = await params;
   if (!id?.trim()) {
@@ -81,6 +82,7 @@ export async function PATCH(
     baseUrl,
     instanceName: body.instance_name ?? null,
     apiKey: body.api_key ?? null,
+    actorUserId: adminSession.user.id,
   });
 
   if ("error" in result) {
@@ -97,11 +99,12 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authError = await ensureAdmin(_request);
+  const authError = await ensureAdmin(request);
   if (authError) return authError;
+  const adminSession = await requireAdmin(request);
 
   const { id } = await params;
   if (!id?.trim()) {
@@ -111,7 +114,7 @@ export async function DELETE(
     );
   }
 
-  const result = await deleteEvolutionInstance(id.trim());
+  const result = await deleteEvolutionInstance(id.trim(), adminSession.user.id);
   if ("error" in result) {
     return NextResponse.json(
       { error: result.error },

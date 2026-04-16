@@ -29,10 +29,10 @@ function formatLongDateLabel(date: string): string {
 }
 
 function intensityClass(leads: number): string {
-  if (leads >= 10) return "bg-brand-neon/45 border-brand-neon/60";
-  if (leads >= 5) return "bg-brand-neon/30 border-brand-neon/45";
-  if (leads >= 1) return "bg-brand-neon/15 border-brand-neon/30";
-  return "bg-brand-surface/80 border-brand-border";
+  if (leads >= 10) return "bg-brand-neon/18 border-brand-neon/55";
+  if (leads >= 5) return "bg-brand-neon/12 border-brand-neon/42";
+  if (leads >= 1) return "bg-brand-neon/8 border-brand-neon/30";
+  return "bg-brand-surface/55 border-brand-border/90";
 }
 
 function intensityLabel(leads: number): string {
@@ -135,18 +135,18 @@ export function DailyCalendar({ data }: { data: DayData[] }) {
   };
 
   return (
-    <div className="panel-lux rounded-xl border border-brand-border bg-brand-surface p-4">
-      <div className="mb-4 flex items-end justify-between gap-3">
+    <div className="panel-lux rounded-2xl border border-brand-border/90 bg-brand-surface/70 p-5 sm:p-6">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-brand-border/70 pb-4">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-brand-neon">
             Calendário de leads
           </h3>
-          <p className="text-xs text-brand-muted">
-            Visão compacta mensal com resumo do dia selecionado.
+          <p className="mt-1 text-xs text-brand-muted">
+            Mapa diário de captação com leitura rápida de intensidade.
           </p>
         </div>
         {monthLabel ? (
-          <span className="rounded-md border border-brand-border bg-brand-surface px-2 py-1 text-xs font-medium capitalize text-brand-muted">
+          <span className="rounded-lg border border-brand-border bg-brand-surface/80 px-2.5 py-1.5 text-xs font-medium capitalize text-brand-text">
             {monthLabel}
           </span>
         ) : null}
@@ -157,13 +157,13 @@ export function DailyCalendar({ data }: { data: DayData[] }) {
       ) : (
         <>
           <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
-            <span className="rounded-full border border-brand-border bg-brand-surface/80 px-2.5 py-1 text-brand-muted">
+            <span className="rounded-full border border-brand-border bg-brand-surface/80 px-2.5 py-1.5 text-brand-muted">
               Total no mês: <strong className="text-brand-text">{monthTotalLeads}</strong>
             </span>
             {peakDay ? (
               <button
                 type="button"
-                className="rounded-full border border-brand-neon/30 bg-brand-neon/10 px-2.5 py-1 text-brand-neon transition hover:bg-brand-neon/15"
+                className="rounded-full border border-brand-neon/30 bg-brand-neon/10 px-2.5 py-1.5 text-brand-neon transition hover:bg-brand-neon/15"
                 onClick={() => setSelectedDate(peakDay.date)}
               >
                 Pico: {formatDateLabel(peakDay.date)} ({peakDay.leads})
@@ -171,7 +171,7 @@ export function DailyCalendar({ data }: { data: DayData[] }) {
             ) : null}
             <button
               type="button"
-              className="rounded-full border border-brand-border bg-brand-surface/80 px-2.5 py-1 text-brand-muted transition hover:border-brand-neon/40 hover:text-brand-text"
+              className="rounded-full border border-brand-border bg-brand-surface/80 px-2.5 py-1.5 text-brand-muted transition hover:border-brand-neon/40 hover:text-brand-text"
               onClick={() => setSelectedDate(todayKey)}
               disabled={!leadsByDate.has(todayKey)}
             >
@@ -179,13 +179,13 @@ export function DailyCalendar({ data }: { data: DayData[] }) {
             </button>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-        <div className="max-w-[380px]">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,390px)_minmax(0,1fr)]">
+        <div className="max-w-[390px] rounded-xl border border-brand-border/80 bg-brand-surface/45 p-3">
           <div className="mb-2 grid grid-cols-7 gap-1.5">
             {WEEKDAY_LABELS.map((label) => (
               <div
                 key={label}
-                className="text-center text-[10px] font-medium uppercase tracking-wide text-brand-muted"
+                className="text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-brand-muted/90"
               >
                 {label}
               </div>
@@ -221,42 +221,62 @@ export function DailyCalendar({ data }: { data: DayData[] }) {
                   onClick={() => setSelectedDate(day.date)}
                   title={`${formatDateLabel(day.date)} - ${day.leads} leads`}
                   aria-label={`${formatDateLabel(day.date)} com ${day.leads} leads`}
-                  className={`relative h-12 rounded-md border px-2 py-1 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-neon/45 hover:border-brand-neon/60 ${
+                  className={`relative flex h-12 items-center justify-center rounded-lg border transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-neon/45 hover:-translate-y-[1px] hover:border-brand-neon/60 ${
                     selectedDate === day.date
-                      ? "border-brand-neon/70 ring-1 ring-brand-neon/30 shadow-[0_0_0_1px_rgba(0,200,130,0.2)]"
+                      ? "border-brand-neon/70 bg-brand-neon/14 ring-1 ring-brand-neon/30 shadow-[0_6px_16px_-12px_rgba(0,200,130,0.6)]"
                       : intensityClass(day.leads)
                   }`}
                 >
-                  <span className="text-xs font-semibold text-brand-text">{day.day}</span>
-                  {day.leads > 0 ? (
-                    <span className="absolute bottom-1 right-1 rounded bg-brand-dark/70 px-1 text-[10px] font-medium text-brand-neon">
-                      {day.leads}
-                    </span>
-                  ) : null}
+                  <span className="text-sm font-semibold tabular-nums text-brand-text">{day.day}</span>
+                  <span
+                    aria-hidden
+                    className={`absolute bottom-1.5 h-1.5 w-1.5 rounded-full ${
+                      day.leads > 0 ? "bg-brand-neon/90" : "bg-transparent"
+                    }`}
+                  />
                 </button>
               ) : (
-                <div key={day.key} className="h-12 rounded-md border border-transparent" />
+                <div key={day.key} className="h-12 rounded-lg border border-transparent" />
               )
             )}
           </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-wide text-brand-muted">
+            <span className="inline-flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full border border-brand-border bg-brand-surface/80" />
+              Sem captação
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full border border-brand-neon/40 bg-brand-neon/15" />
+              Baixo
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full border border-brand-neon/50 bg-brand-neon/30" />
+              Médio
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full border border-brand-neon/60 bg-brand-neon/45" />
+              Alto
+            </span>
+          </div>
         </div>
 
-        <div className="rounded-lg border border-brand-border bg-brand-surface/50 p-4">
-          <h4 className="text-sm font-semibold text-brand-text">Dia atual selecionado</h4>
+        <div className="rounded-xl border border-brand-border/80 bg-brand-surface/55 p-4 sm:p-5">
+          <h4 className="text-sm font-semibold text-brand-text">Resumo do dia selecionado</h4>
           <p className="mt-1 text-xs capitalize text-brand-muted">
             {selectedDate ? formatLongDateLabel(selectedDate) : "Sem data selecionada"}
           </p>
 
           <ul className="mt-4 space-y-2 text-sm">
-            <li className="flex items-center justify-between rounded-md border border-brand-border bg-brand-surface/80 px-3 py-2">
+            <li className="flex items-center justify-between rounded-lg border border-brand-border bg-brand-surface/80 px-3 py-2">
               <span className="text-brand-muted">Leads no dia</span>
               <strong className="text-brand-text">{selectedLeads}</strong>
             </li>
-            <li className="flex items-center justify-between rounded-md border border-brand-border bg-brand-surface/80 px-3 py-2">
+            <li className="flex items-center justify-between rounded-lg border border-brand-border bg-brand-surface/80 px-3 py-2">
               <span className="text-brand-muted">Nível</span>
               <strong className="text-brand-text">{intensityLabel(selectedLeads)}</strong>
             </li>
-            <li className="flex items-center justify-between rounded-md border border-brand-border bg-brand-surface/80 px-3 py-2">
+            <li className="flex items-center justify-between rounded-lg border border-brand-border bg-brand-surface/80 px-3 py-2">
               <span className="text-brand-muted">Comparação com ontem</span>
               <strong className={deltaClass(selectedDelta)}>
                 {selectedDelta >= 0 ? "+" : ""}
@@ -274,7 +294,7 @@ export function DailyCalendar({ data }: { data: DayData[] }) {
                 <li key={item.date}>
                   <button
                     type="button"
-                    className="flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-xs text-brand-muted transition hover:bg-brand-surface hover:text-brand-text"
+                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs text-brand-muted transition hover:bg-brand-surface hover:text-brand-text"
                     onClick={() => setSelectedDate(item.date)}
                   >
                     <span>{formatDateLabel(item.date)}</span>

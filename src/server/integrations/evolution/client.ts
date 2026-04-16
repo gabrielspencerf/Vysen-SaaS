@@ -52,7 +52,7 @@ function buildHttpDetails(
       statusText,
       errorType: "endpoint_not_found",
       bodyPreview,
-      hint: "Endpoint de health nao encontrado. Verifique base URL, path e versao da Evolution.",
+      hint: "Endpoint de health não encontrado. Verifique base URL, path e versão da Evolution.",
     };
   }
   if (statusCode === 401 || statusCode === 403) {
@@ -64,7 +64,7 @@ function buildHttpDetails(
       statusText,
       errorType: "auth",
       bodyPreview,
-      hint: "Falha de autenticacao. Valide API key e permissoes da instancia.",
+      hint: "Falha de autenticação. Valide API key e permissões da instância.",
     };
   }
   if (statusCode >= 500) {
@@ -87,7 +87,7 @@ function buildHttpDetails(
     statusText,
     errorType: "http_error",
     bodyPreview,
-    hint: "Resposta HTTP inesperada no health check. Revise endpoint e configuracao.",
+    hint: "Resposta HTTP inesperada no health check. Revise endpoint e configuração.",
   };
 }
 

@@ -29,6 +29,10 @@ export async function POST(request: NextRequest) {
     typeof body.contextArea === "string" && body.contextArea.trim()
       ? body.contextArea.trim()
       : "geral";
+  const reasoningMode =
+    body.reasoningMode === "fast" || body.reasoningMode === "thinking"
+      ? body.reasoningMode
+      : "thinking";
   const history = Array.isArray(body.history)
     ? body.history
         .filter(
@@ -44,6 +48,30 @@ export async function POST(request: NextRequest) {
         )
         .slice(-12)
     : [];
+  const memoryContext =
+    body.memoryContext && typeof body.memoryContext === "object"
+      ? (body.memoryContext as {
+          threadSummary?: unknown;
+          threadContexts?: unknown;
+          previousSummaries?: unknown;
+        })
+      : null;
+  const threadSummary =
+    typeof memoryContext?.threadSummary === "string"
+      ? memoryContext.threadSummary.trim().slice(0, 420)
+      : null;
+  const threadContexts = Array.isArray(memoryContext?.threadContexts)
+    ? memoryContext.threadContexts
+        .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+        .map((item) => item.trim().slice(0, 380))
+        .slice(0, 12)
+    : [];
+  const previousSummaries = Array.isArray(memoryContext?.previousSummaries)
+    ? memoryContext.previousSummaries
+        .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+        .map((item) => item.trim().slice(0, 280))
+        .slice(0, 8)
+    : [];
 
   try {
     const result = await askVysenCopilot({
@@ -51,14 +79,21 @@ export async function POST(request: NextRequest) {
       tenantId,
       userId: session.user.id,
       channel: "dashboard",
+      reasoningMode,
       contextArea,
       history,
+      memoryContext: {
+        threadSummary,
+        threadContexts,
+        previousSummaries,
+      },
     });
     return NextResponse.json(result);
-  } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Falha ao consultar a Vysen neste momento.";
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch {
+    return NextResponse.json(
+      { error: "Falha ao consultar a Vysen neste momento." },
+      { status: 500 }
+    );
   }
 }
 

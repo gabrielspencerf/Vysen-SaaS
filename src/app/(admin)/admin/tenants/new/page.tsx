@@ -12,6 +12,16 @@ export default function NewTenantPage() {
   const [slug, setSlug] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [auditEnabled, setAuditEnabled] = useState(false);
+  const [auditScopes, setAuditScopes] = useState<string[]>([]);
+
+  function toggleAuditScope(scope: string, checked: boolean) {
+    setAuditScopes((prev) => {
+      if (checked) return Array.from(new Set([...prev, scope]));
+      return prev.filter((item) => item !== scope);
+    });
+  }
 
   function deriveSlug(value: string) {
     setSlug(
@@ -31,7 +41,17 @@ export default function NewTenantPage() {
       const res = await fetch("/api/admin/tenants", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), slug: slug.trim() }),
+        body: JSON.stringify({
+          name: name.trim(),
+          slug: slug.trim(),
+          settings: {
+            features: {
+              notificationsEnabled,
+              auditEnabled,
+              auditScopes: auditEnabled ? auditScopes : [],
+            },
+          },
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -95,6 +115,69 @@ export default function NewTenantPage() {
             className="w-full bg-brand-surface border-brand-border text-brand-text font-mono"
             required
           />
+        </div>
+        <div className="space-y-3 rounded-xl border border-brand-border bg-brand-surface/40 p-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-neon">
+            Governança da conta (tenant)
+          </h2>
+          <div className="flex items-center gap-2">
+            <input
+              id="notifications_enabled"
+              type="checkbox"
+              checked={notificationsEnabled}
+              onChange={(e) => setNotificationsEnabled(e.target.checked)}
+              className="rounded border-brand-border bg-brand-surface text-brand-neon focus:ring-brand-neon"
+            />
+            <label htmlFor="notifications_enabled" className="text-sm text-brand-text">
+              Habilitar notificações in-app de ações da conta
+            </label>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              id="audit_enabled"
+              type="checkbox"
+              checked={auditEnabled}
+              onChange={(e) => setAuditEnabled(e.target.checked)}
+              className="rounded border-brand-border bg-brand-surface text-brand-neon focus:ring-brand-neon"
+            />
+            <label htmlFor="audit_enabled" className="text-sm text-brand-text">
+              Habilitar auditoria da conta em configurações
+            </label>
+          </div>
+          {auditEnabled && (
+            <div className="space-y-2 rounded-lg border border-brand-border/80 bg-brand-dark/20 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-brand-muted">
+                Escopos de auditoria liberados
+              </p>
+              <label className="flex items-center gap-2 text-sm text-brand-text">
+                <input
+                  type="checkbox"
+                  checked={auditScopes.includes("integrations")}
+                  onChange={(e) => toggleAuditScope("integrations", e.target.checked)}
+                  className="rounded border-brand-border bg-brand-surface text-brand-neon focus:ring-brand-neon"
+                />
+                Integrações
+              </label>
+              <label className="flex items-center gap-2 text-sm text-brand-text">
+                <input
+                  type="checkbox"
+                  checked={auditScopes.includes("products_leads")}
+                  onChange={(e) => toggleAuditScope("products_leads", e.target.checked)}
+                  className="rounded border-brand-border bg-brand-surface text-brand-neon focus:ring-brand-neon"
+                />
+                Produtos e leads
+              </label>
+              <label className="flex items-center gap-2 text-sm text-brand-text">
+                <input
+                  type="checkbox"
+                  checked={auditScopes.includes("users_memberships")}
+                  onChange={(e) => toggleAuditScope("users_memberships", e.target.checked)}
+                  className="rounded border-brand-border bg-brand-surface text-brand-neon focus:ring-brand-neon"
+                />
+                Usuários e memberships
+              </label>
+            </div>
+          )}
         </div>
         <div className="flex gap-3 pt-4">
           <Button

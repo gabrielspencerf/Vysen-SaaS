@@ -13,6 +13,7 @@ import { DashboardPageHeader } from "@/components/layout";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui";
 import { BarChart3 } from "lucide-react";
+import { ProviderBrandIcon } from "@/components/provider-brand-icon";
 import { AdsSpendChart } from "@/components/dashboard-charts-lazy";
 import { env } from "@/config/env";
 import { PageSpeedForm } from "../pagespeed/pagespeed-form";
@@ -186,7 +187,13 @@ export default async function DashboardGoogleAdsPage({
         <DashboardPageHeader
           title="Google Ads"
           description="Contas conectadas e métricas por campanha sincronizadas."
-          icon={BarChart3}
+          iconNode={
+            <ProviderBrandIcon
+              provider="googleAds"
+              variant="plain"
+              className="brand-icon-monochrome h-4 w-4"
+            />
+          }
           badges={[`${accounts.length} contas`]}
           actions={
             env.googleAdsConnectEnabled ? (
@@ -242,7 +249,13 @@ export default async function DashboardGoogleAdsPage({
           <EmptyState
             title="Nenhuma conta conectada"
             description="Conecte sua conta do Google Ads para importar métricas e ver a atribuição de leads."
-            icon={<BarChart3 className="h-6 w-6" />}
+            icon={
+              <ProviderBrandIcon
+                provider="googleAds"
+                variant="plain"
+                className="brand-icon-monochrome h-5 w-5"
+              />
+            }
           />
         ) : (
           <div className="space-y-3">
@@ -335,7 +348,13 @@ export default async function DashboardGoogleAdsPage({
           <EmptyState
             title="Nenhum dado de atribuição"
             description="Nenhuma campanha com dados no período ou nenhum lead com UTM compatível."
-            icon={<BarChart3 className="h-6 w-6" />}
+            icon={
+              <ProviderBrandIcon
+                provider="googleAds"
+                variant="plain"
+                className="brand-icon-monochrome h-5 w-5"
+              />
+            }
           />
         ) : (
           <div className="space-y-3">
@@ -439,7 +458,13 @@ export default async function DashboardGoogleAdsPage({
           <EmptyState
             title="Nenhum snapshot"
             description="Nenhum snapshot para os filtros atuais. Conecte uma conta e execute o sync."
-            icon={<BarChart3 className="h-6 w-6" />}
+            icon={
+              <ProviderBrandIcon
+                provider="googleAds"
+                variant="plain"
+                className="brand-icon-monochrome h-5 w-5"
+              />
+            }
           />
         ) : (
           <div className="space-y-3">

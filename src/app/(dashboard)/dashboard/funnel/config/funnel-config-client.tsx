@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button, Input, Card, CardContent } from "@/components/ui";
-import { Filter, Plus, Trash2, GripVertical, Star } from "lucide-react";
+import { CheckCircle2, Filter, Plus, Trash2, GripVertical, Star, TriangleAlert } from "lucide-react";
 
 type FunnelStep = {
   id: string;
@@ -225,14 +225,16 @@ export function FunnelConfigClient({
   return (
     <div className="space-y-6">
       {error && (
-        <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
-          {error}
-        </p>
+        <div className="flex items-start gap-2 rounded-lg border border-red-500/35 bg-red-500/12 px-3 py-2.5 text-sm text-red-700 dark:text-red-300">
+          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <p className="font-medium">{error}</p>
+        </div>
       )}
       {success && (
-        <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
-          {success}
-        </p>
+        <div className="flex items-start gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-3 py-2.5 text-sm text-emerald-700 dark:text-emerald-300">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <p className="font-semibold">{success}</p>
+        </div>
       )}
 
       <Card className="border-brand-border bg-brand-surface">

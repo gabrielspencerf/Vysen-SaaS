@@ -16,6 +16,11 @@ Objetivo: organizar credenciais, IDs e segredos sem hardcode, e permitir o prime
 | `SESSION_COOKIE_NAME` | Não | Nome do cookie (padrão: `session`). |
 | `NODE_ENV` | Não | `development` \| `production`. |
 | `NEXT_PUBLIC_APP_URL` | Recomendado | URL base (redirects, OAuth, webhooks). |
+| `OPENAI_API_KEY` | Recomendado | Copilot Vysen e transcrição/fluxos IA. |
+| `OPENAI_MODEL_THINKING` | Não | Modelo principal para análises profundas do Vysen. |
+| `OPENAI_MODEL_FAST` | Não | Modelo de fallback para respostas rápidas. |
+| `OPENAI_MODEL_FALLBACK_ENABLED` | Não | Habilita fallback automático do modelo principal para o rápido. |
+| `OPENAI_THINKING_TIMEOUT_MS` | Não | Timeout do modo thinking antes de fallback. |
 
 ### 1.2 Por tenant (banco de dados)
 
@@ -28,6 +33,8 @@ Objetivo: organizar credenciais, IDs e segredos sem hardcode, e permitir o prime
 | Integração | Onde fica | O que é armazenado |
 |------------|-----------|---------------------|
 | **Google Ads** | `google_ads_accounts` | `external_id` (customer id), `refresh_token_encrypted`, `access_token_encrypted`, `token_expires_at`, `label`. Tokens criptografados com chave de .env (`GOOGLE_ADS_ENCRYPTION_KEY`). |
+| **Meta Ads** | `meta_ads_accounts`, `meta_insight_snapshots` | Token de conta e snapshots de performance por tenant, com campos sensíveis criptografados. |
+| **Clarity** | `clarity_connections`, `clarity_snapshots` | Credenciais de conexão e snapshots de uso/comportamento por tenant. |
 | **Typebot** | `typebot_bots` (+ `integrations`) | `external_id`, `name`, `webhook_secret_hash`, `webhook_secret_encrypted`, `api_token_encrypted`, `metrics_api_base_url`. Webhook usa `typebot_bots.id` (UUID) na URL. |
 | **Evolution** | `evolution_instances` (+ `integrations`) | `external_id`, `base_url`, `api_key_encrypted`, `instance_name`. Webhook usa `evolution_instances.id` (UUID) na URL. |
 | **UAZAPI** | `uazapi_instances` (+ `integrations`) | `external_id`, `base_url`, `api_key_encrypted`, `instance_name`. |
@@ -116,10 +123,13 @@ Credenciais **globais** de cada integração (ex.: Client ID/Secret Google, deve
 |------|----|--------------------|
 | Sessão, login, tenant | Sim (login, troca de tenant) | .env: SESSION_SECRET, etc. |
 | Conta Google Ads | Sim (Dashboard → Google Ads → Conectar) | .env: credenciais OAuth e API |
+| Conta Meta Ads | Sim (Dashboard → Meta Ads → Conectar) | .env: app id/secret, redirect e criptografia |
+| Conexão Clarity | Sim (Dashboard → Clarity) | .env: chaves globais e conexão por tenant |
 | Bot Typebot | Sim (Admin > Integrações) | Opcional via seed |
 | Instância Evolution | Sim (Admin > Integrações) | Opcional via seed |
 | Instância UAZAPI | Sim (Admin > Integrações) | Opcional via API admin |
-| Funis e etapas | Não (visão de funil existe; cadastro de funil/etapa não) | Banco (SQL ou futura UI) |
+| Funis e etapas | Sim (Dashboard > Funil > Configuração) | Banco por tenant |
+| Vysen Copilot | Sim (chat dashboard/admin) | .env: OpenAI e política de modelos |
 | Admin (tenants, usuários, memberships) | Sim (área /admin) | - |
 
 ---
@@ -129,6 +139,8 @@ Credenciais **globais** de cada integração (ex.: Client ID/Secret Google, deve
 | Integração | Cadastro na aplicação | Observação |
 |------------|------------------------|------------|
 | **Google Ads** | Sim. Dashboard (tenant) → Google Ads → botão Conectar → OAuth → escolher conta. | Conta e tokens salvos em `google_ads_accounts`. Não cria linha em `integrations` hoje (leitura é direto de `google_ads_accounts`). |
+| **Meta Ads** | Sim. Dashboard (tenant) → Meta Ads → conexão OAuth da conta. | Conta e snapshots por tenant em tabelas próprias de Meta Ads. |
+| **Clarity** | Sim. Dashboard (tenant) → Clarity → conectar projeto/token. | Snapshots por tenant e sync via worker. |
 | **Typebot** | Sim. Admin → Integrações → Conectar Typebot. | Suporta webhook e token de métricas via API. |
 | **Evolution** | Sim. Admin → Integrações → Conectar Evolution API. | Suporta webhook com assinatura HMAC (timestamp + signature). |
 | **UAZAPI** | Sim. Admin → Integrações → Conectar UAZAPI. | Status operacional no painel de observabilidade. |

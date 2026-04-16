@@ -17,10 +17,11 @@ export function VysenDashboardBubbleChat({ tenantId }: VysenDashboardBubbleChatP
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-brand-border bg-brand-surface text-brand-neon shadow-lg transition hover:scale-[1.03] hover:bg-brand-surface/90"
+        className="fixed bottom-4 right-4 z-40 inline-flex h-12 items-center gap-2 rounded-full border border-brand-border bg-brand-surface/95 px-3 text-brand-neon shadow-lg backdrop-blur-sm transition hover:-translate-y-[1px] hover:bg-brand-surface"
         aria-label="Abrir chat da Vysen"
       >
         <VysenAuraIcon className="h-5 w-5" />
+        <span className="pr-0.5 text-xs font-semibold tracking-wide text-brand-text">Vysen</span>
       </button>
 
       {isOpen && (
@@ -30,10 +31,12 @@ export function VysenDashboardBubbleChat({ tenantId }: VysenDashboardBubbleChatP
             onClick={() => setIsOpen(false)}
             aria-hidden="true"
           />
-          <section className="absolute bottom-4 right-4 top-4 flex w-[min(96vw,420px)] flex-col rounded-2xl border border-brand-border bg-brand-surface shadow-2xl">
-            <header className="flex items-center justify-between border-b border-brand-border px-4 py-3">
+          <section className="absolute bottom-4 right-4 top-4 flex w-[min(96vw,430px)] flex-col overflow-hidden rounded-2xl border border-brand-border bg-brand-surface/94 shadow-2xl backdrop-blur-sm">
+            <header className="flex items-center justify-between border-b border-brand-border/80 bg-brand-surface/90 px-4 py-3">
               <div className="flex items-center gap-2">
-                <VysenAuraIcon className="h-4 w-4" />
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-brand-border bg-brand-surface/80">
+                  <VysenAuraIcon className="h-4 w-4" />
+                </span>
                 <div>
                   <p className="text-sm font-semibold text-brand-text">Vysen</p>
                   <p className="text-[11px] text-brand-muted">Analista da sua operação</p>
@@ -42,18 +45,18 @@ export function VysenDashboardBubbleChat({ tenantId }: VysenDashboardBubbleChatP
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="rounded-full border border-brand-border p-1.5 text-brand-text"
+                className="rounded-full border border-brand-border bg-brand-surface/70 p-1.5 text-brand-text transition hover:bg-brand-surface"
               >
                 <span className="sr-only">Fechar chat da Vysen</span>
                 <X className="h-4 w-4" />
               </button>
             </header>
-            <div className="scroll-hide flex-1 overflow-y-auto p-4">
+            <div className="min-h-0 flex-1">
               <VysenCopilotChat
                 tenantId={tenantId}
                 endpoint="/api/dashboard/vysen/chat"
-                title="Chat analítico da Vysen"
-                description="Converse com a Vysen sobre funil, campanhas, negociação e próximos passos."
+                title="Copiloto Vysen"
+                description="Converse sobre funil, campanhas, negociação e próximos passos."
               />
             </div>
           </section>

@@ -6,7 +6,7 @@
 
 import { redirect } from "next/navigation";
 import { getCurrentSession } from "@/server/auth";
-import { getCurrentMembership, isSuperAdmin } from "@/server/tenancy/membership";
+import { getCurrentMembership } from "@/server/tenancy/membership";
 import type { MembershipItem } from "@/server/tenancy/membership";
 import type { SessionWithUserAndTenant } from "@/server/auth/session";
 import { requestFromHeaders } from "@/server/request";
@@ -43,7 +43,7 @@ export async function getDashboardTenantContext(): Promise<DashboardTenantContex
     redirect("/dashboard/context");
   }
 
-  const showAdminLink = await isSuperAdmin(session.user.id);
+  const showAdminLink = currentMembership.roleSlug === "super_admin";
 
   return {
     session,

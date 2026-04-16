@@ -54,6 +54,22 @@ function getMetricBarClass(
   return "bg-amber-500";
 }
 
+function buildMiniSeries(seed: string, metricPercent: number): number[] {
+  const safePercent = Math.max(8, Math.min(100, metricPercent));
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+
+  return Array.from({ length: 10 }).map((_, idx) => {
+    const noise = ((hash >> ((idx % 4) * 6)) & 0x1f) / 100; // 0 - 0.31
+    const baseline = safePercent / 100;
+    const wave = Math.sin((idx + 1) * 0.8) * 0.08;
+    const value = baseline * (0.62 + idx * 0.038) + wave + noise - 0.12;
+    return Math.max(0.08, Math.min(0.98, value));
+  });
+}
+
 export function SidebarInsightsCarousel({ insights }: SidebarInsightsCarouselProps) {
   const cards = useMemo(() => insights.cards.filter((card) => card !== null), [insights.cards]);
   const [index, setIndex] = useState(0);
@@ -117,7 +133,7 @@ export function SidebarInsightsCarousel({ insights }: SidebarInsightsCarouselPro
     <div className="mx-2 rounded-xl border border-brand-border bg-brand-surface/40 px-3 py-3">
       <div
         ref={viewportRef}
-        className={`relative h-[146px] overflow-hidden ${isDragging ? "cursor-grabbing select-none" : "cursor-grab"}`}
+        className={`relative h-[152px] overflow-hidden ${isDragging ? "cursor-grabbing select-none" : "cursor-grab"}`}
         style={{ touchAction: "pan-y" }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -135,15 +151,41 @@ export function SidebarInsightsCarousel({ insights }: SidebarInsightsCarouselPro
           {cards.map((card, cardIndex) => {
             const metricPercent = getMetricPercent(card.value, card.valueType);
             const metricColorClass = getMetricBarClass(card.value, card.valueType, card.statusLabel);
+            const miniSeries = buildMiniSeries(card.id, metricPercent);
+            const miniSeriesPath = miniSeries
+              .map((point, pointIndex) => {
+                const x = (pointIndex / (miniSeries.length - 1)) * 100;
+                const y = 100 - point * 100;
+                return `${pointIndex === 0 ? "M" : "L"} ${x},${y}`;
+              })
+              .join(" ");
 
             return (
               <article key={card.id} data-card-index={cardIndex} className="h-full w-full shrink-0 grow-0 basis-full px-1">
-                <p className="text-[0.72rem] font-medium uppercase tracking-wide text-brand-muted">
+                <p className="text-[0.67rem] font-semibold uppercase tracking-[0.08em] text-brand-muted">
                   {card.label}
                 </p>
-                <p className="mt-0.5 text-[1.95rem] leading-none font-semibold text-brand-text">
+                <p className="mt-1 text-[1.66rem] leading-none font-bold text-brand-text">
                   {formatInsightValue(card.value, card.valueType, card.statusLabel)}
                 </p>
+                <div className="mt-2 rounded-lg border border-brand-border/70 bg-brand-surface/45 px-2 py-1.5">
+                  <svg
+                    viewBox="0 0 100 100"
+                    preserveAspectRatio="none"
+                    className="h-7 w-full"
+                    aria-hidden
+                  >
+                    <path
+                      d={miniSeriesPath}
+                      fill="none"
+                      className="text-brand-neon/80"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
                 <div className="mt-1.5">
                   <div className="h-2 w-full overflow-hidden rounded-full bg-brand-border/80">
                     <div
@@ -154,7 +196,7 @@ export function SidebarInsightsCarousel({ insights }: SidebarInsightsCarouselPro
                 </div>
                 <p
                   data-card-hint-index={cardIndex}
-                  className="mt-1.5 line-clamp-2 text-[0.72rem] leading-4 text-brand-muted"
+                  className="mt-1.5 line-clamp-2 text-[0.69rem] leading-4 text-brand-muted"
                 >
                   {card.hint}
                 </p>

@@ -6,7 +6,7 @@ Visão específica do escopo, forma de execução, etapas, escalabilidade, segur
 
 ## 1. Escopo do projeto
 
-**Nome / propósito:** Aplicação **observabilidade-saas** — SaaS multi-tenant para observabilidade operacional de leads, conversas, aquisição (Google Ads) e funil.
+**Nome / propósito:** Aplicação **observabilidade-saas** — SaaS multi-tenant para observabilidade operacional de leads, conversas, aquisição (Google Ads, Meta Ads, Clarity), funil e apoio de decisão com Vysen Copilot.
 
 **Escopo atual:**
 
@@ -14,7 +14,9 @@ Visão específica do escopo, forma de execução, etapas, escalabilidade, segur
 - **Leads:** Ingestão via webhooks (Typebot, Evolution), deduplicação por tenant + email/telefone/source_external_id, UTM, eventos de jornada, funil e etapa atual.
 - **Conversas:** Eventos Evolution (messages.upsert) viram conversas e mensagens; listagem e detalhe por tenant.
 - **Google Ads:** OAuth por tenant, contas conectadas, sync de campanhas e métricas (snapshots), atribuição Ads → Leads (last-touch por campanha), CPL indicativo.
+- **Meta Ads e Clarity:** conexão por tenant, snapshots de desempenho/comportamento, uso em dashboards e análises contextuais.
 - **Funil:** Visão por tenant (volume por etapa, conversão, % do total, gargalo), filtro opcional por período (first_seen_at). Jornada do lead no detalhe (etapa atual + eventos com etapa). Qualidade de dados: processador Typebot preenche `current_funnel_step_id` e `lead_events.funnel_step_id` via criteria em `funnel_steps`.
+- **Vysen Copilot:** assistente analista com memória de contexto, prompts orientados por objetivo e fallback de modelo para maior resiliência operacional.
 - **Admin central:** CRUD de tenants, usuários e memberships; acesso por role `super_admin` (permission `admin:access`).
 - **Integrações:** Cadastro de Typebot, Evolution e UAZAPI pela UI admin; cadastro Google Ads via OAuth no dashboard.
 - **Observabilidade:** Painel admin com status de API/DB/Redis/worker, profundidade de filas e DLQ, status de instâncias Evolution/UAZAPI e erros recentes.

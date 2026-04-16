@@ -34,7 +34,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: { name?: string; slug?: string };
+  let body: {
+    name?: string;
+    slug?: string;
+    settings?: Record<string, unknown> | null;
+  };
   try {
     body = await request.json();
   } catch {
@@ -47,6 +51,7 @@ export async function POST(request: NextRequest) {
   const result = await createTenant({
     name: body.name ?? "",
     slug: body.slug ?? "",
+    settings: body.settings,
   });
 
   if ("error" in result) {

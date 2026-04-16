@@ -6,12 +6,12 @@ Voz, tom e padrões de conteúdo (microcopy, mensagens de erro, labels e acessib
 
 ## 1. Voz da marca
 
-- **Voz:** [PLACEHOLDER: ex. "Profissional e direta", "Amigável e técnica", "Objetiva e orientada a resultado".]
+- **Voz:** Profissional, consultiva e orientada a resultado.
 - **Princípios:**
-  - [PLACEHOLDER: ex. Clareza — preferir frases curtas e termos conhecidos.]
-  - [PLACEHOLDER: ex. Consistência — mesmo termo para o mesmo conceito em toda a UI.]
-  - [PLACEHOLDER: ex. Respeito — evitar culpar o usuário em erros.]
-  - [PLACEHOLDER: ex. Concisão — evitar texto desnecessário em botões e labels.]
+  - Clareza: frases curtas, sem jargão desnecessário.
+  - Consistência: o mesmo termo para o mesmo conceito em toda a UI.
+  - Respeito: erros explicam causa e próximo passo, sem culpar o usuário.
+  - Concisão: botões e labels objetivos, sem textos genéricos.
 
 ---
 
@@ -46,7 +46,7 @@ Voz, tom e padrões de conteúdo (microcopy, mensagens de erro, labels e acessib
 - **Evitar:** "Erro ao salvar", "Algo deu errado" sem contexto.
 - **Preferir:** "E-mail já está em uso" ou "Preencha o nome antes de salvar".
 - **Formulário:** Erro próximo ao campo; resumo no topo se houver vários erros.
-- **Idioma:** [PLACEHOLDER: ex. Português (pt-BR) em toda a UI.]
+- **Idioma:** Português (pt-BR) em toda a UI.
 
 ---
 
@@ -72,11 +72,16 @@ Manter lista de termos preferidos para consistência:
 
 | Evitar | Preferir |
 |--------|----------|
-| [A definir] | [A definir] |
-| [A definir] | [A definir] |
+| sync | sincronização |
+| spend | gasto |
+| Concluido | Concluído |
+| Operacao | Operação |
+| acao | ação |
+| comecar | começar |
 
 ---
 
 ## 7. Atualização
 
-- Revisar este doc quando forem definidos voz e tom oficiais da marca; substituir placeholders e alinhar exemplos ao produto.
+- Revisar este documento a cada release relevante de UX/copy.
+- Toda nova tela deve validar copy contra este guia antes do merge.

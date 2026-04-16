@@ -6,6 +6,7 @@ import { typebotBots, evolutionInstances, integrations, uazapiInstances } from "
 import { hashWebhookSecret } from "@/server/integrations/webhook-secret";
 import { encryptSecretForStorage } from "@/server/security/secret-storage";
 import { normalizeUazapiCredential } from "@/lib/uazapi-credentials";
+import { recordTenantActivity } from "@/server/tenancy/tenant-activity";
 
 function isMissingColumnError(err: unknown, columnName: string): boolean {
   if (!(err instanceof Error)) return false;
@@ -52,6 +53,7 @@ export interface CreateTypebotBotInput {
   webhookSecret?: string | null;
   apiToken?: string | null;
   metricsApiBaseUrl?: string | null;
+  actorUserId?: string | null;
 }
 
 export async function createTypebotBot(input: CreateTypebotBotInput) {
@@ -99,6 +101,25 @@ export async function createTypebotBot(input: CreateTypebotBotInput) {
       name: row.name?.trim() || row.externalId,
       providerResourceId: row.id,
     });
+    await recordTenantActivity({
+      tenantId: row.tenantId,
+      actorUserId: input.actorUserId ?? null,
+      scope: "integrations",
+      action: "create",
+      notificationType: "integration_created",
+      title: "Integração Typebot criada",
+      message: `Bot ${row.name?.trim() || row.externalId} foi conectado.`,
+      resourceType: "integration_typebot",
+      resourceId: row.id,
+      newValues: {
+        externalId: row.externalId,
+        name: row.name,
+      },
+      metadata: {
+        provider: "typebot",
+        integrationId: row.id,
+      },
+    });
     return { id: row.id, tenantId: row.tenantId, externalId: row.externalId, name: row.name };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "";
@@ -115,6 +136,7 @@ export interface CreateEvolutionInstanceInput {
   baseUrl: string;
   apiKey?: string | null;
   instanceName?: string | null;
+  actorUserId?: string | null;
 }
 
 export async function createEvolutionInstance(input: CreateEvolutionInstanceInput) {
@@ -152,6 +174,26 @@ export async function createEvolutionInstance(input: CreateEvolutionInstanceInpu
       name: row.instanceName?.trim() || row.externalId,
       providerResourceId: row.id,
     });
+    await recordTenantActivity({
+      tenantId: row.tenantId,
+      actorUserId: input.actorUserId ?? null,
+      scope: "integrations",
+      action: "create",
+      notificationType: "integration_created",
+      title: "Integração Evolution criada",
+      message: `Instância ${row.instanceName?.trim() || row.externalId} foi conectada.`,
+      resourceType: "integration_evolution",
+      resourceId: row.id,
+      newValues: {
+        externalId: row.externalId,
+        baseUrl: row.baseUrl,
+        instanceName: row.instanceName,
+      },
+      metadata: {
+        provider: "evolution",
+        integrationId: row.id,
+      },
+    });
     return {
       id: row.id,
       tenantId: row.tenantId,
@@ -177,6 +219,7 @@ export interface CreateUazapiInstanceInput {
   adminToken?: string | null;
   legacyCredential?: string | null;
   instanceName?: string | null;
+  actorUserId?: string | null;
 }
 
 export async function createUazapiInstance(input: CreateUazapiInstanceInput) {
@@ -272,6 +315,26 @@ export async function createUazapiInstance(input: CreateUazapiInstanceInput) {
       provider: "uazapi",
       name: row.instanceName?.trim() || row.externalId,
       providerResourceId: row.id,
+    });
+    await recordTenantActivity({
+      tenantId: row.tenantId,
+      actorUserId: input.actorUserId ?? null,
+      scope: "integrations",
+      action: "create",
+      notificationType: "integration_created",
+      title: "Integração UAZAPI criada",
+      message: `Instância ${row.instanceName?.trim() || row.externalId} foi conectada.`,
+      resourceType: "integration_uazapi",
+      resourceId: row.id,
+      newValues: {
+        externalId: row.externalId,
+        baseUrl: row.baseUrl,
+        instanceName: row.instanceName,
+      },
+      metadata: {
+        provider: "uazapi",
+        integrationId: row.id,
+      },
     });
 
     return {

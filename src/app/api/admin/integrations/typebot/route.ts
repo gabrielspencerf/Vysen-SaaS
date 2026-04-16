@@ -31,8 +31,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  let session;
   try {
-    await requireAdmin(request);
+    session = await requireAdmin(request);
   } catch (err) {
     const e = err as Error & { status?: number };
     return NextResponse.json(
@@ -87,6 +88,7 @@ export async function POST(request: NextRequest) {
     webhookSecret: body.webhook_secret ?? null,
     apiToken: body.api_token ?? null,
     metricsApiBaseUrl: body.metrics_api_base_url ?? null,
+    actorUserId: session.user.id,
   });
 
   if ("error" in result) {

@@ -24,7 +24,7 @@ Redis é **opcional** para o fluxo básico (login e navegação). **Redis é obr
 
 Obrigatório para webhooks e Google Ads (opcional só para login/dashboard/admin):
 
-- **Redis** — obrigatório para: filas do worker, ingest de webhooks (Typebot/Evolution) e fluxo Google Ads (OAuth, sync). Sem Redis, essas funcionalidades não funcionam.
+- **Redis** — obrigatório para: filas do worker, ingest de webhooks (Typebot/Evolution/UAZAPI) e fluxos de sync (Google Ads, Meta Ads e Clarity). Sem Redis, essas funcionalidades não funcionam.
 
 ---
 
@@ -111,7 +111,7 @@ A app estará em `http://localhost:3000` (ou na porta que o Next mostrar no term
 | Banco/infra ok | `GET http://localhost:3000/api/health` — resposta 200 com `{ "ok": true, "db": "ok", "redis": "ok", "worker": "ok" }`. |
 | Login usuário | "Entrar na minha conta" → `/login`; email e senha do seed → redireciona para `/dashboard`. |
 | Login admin | "Acesso administrador" → `/admin-login`; só usuário super_admin entra; redireciona para `/admin`. |
-| Dashboard | Após login usuário: `/dashboard` → `/dashboard/context` (escolher tenant) ou `/dashboard/home`. Sidebar com Início, Leads, Conversas, Google Ads, Funil. |
+| Dashboard | Após login usuário: `/dashboard` → `/dashboard/context` (escolher tenant) ou `/dashboard/home`. Sidebar com Início, Comercial (Leads, Oportunidades, Produtos, Reclamações), Canais (Google Ads, Meta Ads, Clarity, WhatsApp) e Funil. |
 | Admin | Após login admin: `/admin` (hub Integrações, Observabilidade, Tenants, Usuários), incluindo integração UAZAPI e sync de métricas Typebot API. |
 
 ---
@@ -130,6 +130,8 @@ Redis **não** é importado no startup da aplicação; só é usado quando algum
 
 - **Worker** (`npm run worker:dev`): filas Redis + retry/backoff + DLQ.
 - **Google Ads:** callback OAuth (`/api/google-ads/auth/callback`), sync (`/api/google-ads/sync/[accountId]`), estado pendente.
+- **Meta Ads:** callbacks e sync de snapshots/eventos por filas (`queue:meta-ads:*`).
+- **Clarity:** sync de snapshots por filas (`queue:clarity:*`).
 - **Webhooks:** ingest de Typebot e Evolution (enfileiramento de jobs).
 
 Para testes que envolvam apenas login, dashboard e admin, **Redis pode ficar em branco**.

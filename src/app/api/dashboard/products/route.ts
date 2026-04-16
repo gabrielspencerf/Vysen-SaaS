@@ -10,6 +10,7 @@ import {
   listProductsForTenant,
   createProductForTenant,
 } from "@/server/dashboard";
+import { recordTenantActivity } from "@/server/tenancy/tenant-activity";
 
 export async function GET(request: NextRequest) {
   let session;
@@ -88,5 +89,26 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
+  await recordTenantActivity({
+    tenantId,
+    actorUserId: session.user.id,
+    scope: "products_leads",
+    action: "create",
+    notificationType: "product_created",
+    title: "Produto criado",
+    message: `Produto "${name}" foi criado na conta.`,
+    resourceType: "product",
+    resourceId: result.id,
+    newValues: {
+      name,
+      unitPrice,
+      currency: currency ?? null,
+      billingType,
+      billingInterval: billingInterval ?? null,
+    },
+    metadata: {
+      productId: result.id,
+    },
+  });
   return NextResponse.json({ ok: true, id: result.id });
 }

@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/server/admin/require-admin";
 import { createMembership } from "@/server/admin/memberships";
+import { recordTenantActivity } from "@/server/tenancy/tenant-activity";
 
 export async function POST(request: NextRequest) {
   let session;
@@ -54,5 +55,24 @@ export async function POST(request: NextRequest) {
           : 400;
     return NextResponse.json({ error: result.error }, { status });
   }
+  await recordTenantActivity({
+    tenantId,
+    actorUserId: session.user.id,
+    scope: "users_memberships",
+    action: "create",
+    notificationType: "membership_created",
+    title: "Membership criado",
+    message: "Um usuário foi vinculado ao tenant.",
+    resourceType: "membership",
+    resourceId: result.id,
+    newValues: {
+      userId,
+      tenantId,
+      roleSlug,
+    },
+    metadata: {
+      membershipId: result.id,
+    },
+  });
   return NextResponse.json({ id: result.id }, { status: 201 });
 }

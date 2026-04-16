@@ -8,8 +8,9 @@ import { checkRateLimit } from "@/server/security/rate-limit";
 import { validateUazapiCredential } from "@/lib/uazapi-credentials";
 
 export async function POST(request: NextRequest) {
+  let session;
   try {
-    await requireAdmin(request);
+    session = await requireAdmin(request);
   } catch (err) {
     const e = err as Error & { status?: number };
     return NextResponse.json(
@@ -75,6 +76,7 @@ export async function POST(request: NextRequest) {
     token: body.token ?? null,
     adminToken: body.admin_token ?? null,
     instanceName: body.instance_name ?? null,
+    actorUserId: session.user.id,
   });
 
   if ("error" in result) {

@@ -6,7 +6,6 @@ import Link from "next/link";
 import { DashboardPageHeader, PageSection } from "@/components/layout";
 import { Badge, Button, Card, CardContent } from "@/components/ui";
 import { ProviderBrandIcon } from "@/components/provider-brand-icon";
-import { Smartphone } from "lucide-react";
 
 type MessagingProvider = "evolution" | "uazapi";
 
@@ -288,7 +287,13 @@ export default function DashboardSettingsWhatsappPage() {
       <DashboardPageHeader
         title="WhatsApp"
         description="Consulte o status da instância na Evolution ou UAZAPI e gere QR para reconectar o número ao WhatsApp."
-        icon={Smartphone}
+        iconNode={
+          <ProviderBrandIcon
+            provider="whatsapp"
+            variant="plain"
+            className="brand-icon-monochrome h-4 w-4"
+          />
+        }
         badges={loading ? [] : [`${instances.length} instância(ões)`]}
       />
 

@@ -6,11 +6,12 @@ import { requireAdmin } from "@/server/admin/require-admin";
 import { deleteTypebotBot } from "@/server/admin/integrations-delete";
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let session;
   try {
-    await requireAdmin(_request);
+    session = await requireAdmin(request);
   } catch (err) {
     const e = err as Error & { status?: number };
     return NextResponse.json(
@@ -27,7 +28,7 @@ export async function DELETE(
     );
   }
 
-  const result = await deleteTypebotBot(id.trim());
+  const result = await deleteTypebotBot(id.trim(), session.user.id);
   if ("error" in result) {
     return NextResponse.json(
       { error: result.error },

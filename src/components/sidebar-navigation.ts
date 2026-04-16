@@ -18,6 +18,7 @@ import {
   Users,
   Waypoints,
 } from "lucide-react";
+import type { ProviderBrand } from "@/components/provider-brand-icon";
 
 /**
  * Governança da navegação:
@@ -28,6 +29,7 @@ export interface SidebarNavItem {
   href: string;
   label: string;
   icon: LucideIcon;
+  providerBrand?: ProviderBrand;
   exactMatch?: boolean;
 }
 
@@ -62,10 +64,10 @@ export const dashboardNavSections: SidebarNavSection[] = [
     icon: Megaphone,
     collapsible: true,
     items: [
-      { href: "/dashboard/google-ads", label: "Google Ads", icon: BarChart3 },
-      { href: "/dashboard/meta-ads", label: "Meta Ads", icon: Megaphone },
-      { href: "/dashboard/clarity", label: "Clarity", icon: Eye },
-      { href: "/dashboard/settings/whatsapp", label: "WhatsApp", icon: Smartphone },
+      { href: "/dashboard/google-ads", label: "Google Ads", icon: BarChart3, providerBrand: "googleAds" },
+      { href: "/dashboard/meta-ads", label: "Meta Ads", icon: Megaphone, providerBrand: "metaAds" },
+      { href: "/dashboard/clarity", label: "Clarity", icon: Eye, providerBrand: "clarity" },
+      { href: "/dashboard/settings/whatsapp", label: "WhatsApp", icon: Smartphone, providerBrand: "whatsapp" },
     ],
   },
   {

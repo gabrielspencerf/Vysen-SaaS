@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { ProviderBrandIcon } from "@/components/provider-brand-icon";
 import { isNavItemActive, type SidebarNavSection } from "@/components/sidebar-navigation";
 
 interface SidebarNavSectionsProps {
@@ -78,7 +79,9 @@ export function SidebarNavSections({
               {SectionIcon ? <SectionIcon className="h-5 w-5 shrink-0" aria-hidden /> : null}
               <span className="min-w-0 flex-1 text-left">{section.label}</span>
               <ChevronDown
-                className={`h-4 w-4 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                className={`h-4 w-4 shrink-0 transition-transform duration-300 ease-out ${
+                  isOpen ? "rotate-180" : ""
+                }`}
                 aria-hidden
               />
             </button>
@@ -86,7 +89,7 @@ export function SidebarNavSections({
           {isCollapsible ? (
             <div
               id={`sidebar-group-${section.id}`}
-              className={`grid transition-all duration-200 ease-out ${
+              className={`grid transition-all duration-300 ease-out ${
                 isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
               }`}
             >
@@ -104,7 +107,16 @@ export function SidebarNavSections({
                           isActive ? "sidebar-nav-item-active" : ""
                         }`}
                       >
-                        <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                        {item.providerBrand ? (
+                          <ProviderBrandIcon
+                            provider={item.providerBrand}
+                            variant="plain"
+                            frameClassName="h-4 w-4"
+                            className="brand-icon-monochrome h-4 w-4"
+                          />
+                        ) : (
+                          <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                        )}
                         <span className="min-w-0 flex-1 text-sm">{item.label}</span>
                       </Link>
                     );
@@ -126,7 +138,16 @@ export function SidebarNavSections({
                       isActive ? "sidebar-nav-item-active" : ""
                     }`}
                   >
-                    <Icon className="h-5 w-5 shrink-0" aria-hidden />
+                    {item.providerBrand ? (
+                      <ProviderBrandIcon
+                        provider={item.providerBrand}
+                        variant="plain"
+                        frameClassName="h-5 w-5"
+                        className="brand-icon-monochrome h-5 w-5"
+                      />
+                    ) : (
+                      <Icon className="h-5 w-5 shrink-0" aria-hidden />
+                    )}
                     <span className="min-w-0 flex-1">{item.label}</span>
                   </Link>
                 );

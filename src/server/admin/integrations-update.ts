@@ -7,6 +7,7 @@ import { getDb } from "@/server/db";
 import { evolutionInstances, uazapiInstances } from "@/db/schema";
 import { encryptSecretForStorage } from "@/server/security/secret-storage";
 import { normalizeUazapiCredential } from "@/lib/uazapi-credentials";
+import { recordTenantActivity } from "@/server/tenancy/tenant-activity";
 
 function isMissingColumnError(err: unknown, columnName: string): boolean {
   if (!(err instanceof Error)) return false;
@@ -65,6 +66,7 @@ export async function updateEvolutionInstanceById(input: {
   baseUrl: string;
   instanceName?: string | null;
   apiKey?: string | null;
+  actorUserId?: string | null;
 }): Promise<
   | {
       id: string;
@@ -81,6 +83,9 @@ export async function updateEvolutionInstanceById(input: {
     .select({
       id: evolutionInstances.id,
       tenantId: evolutionInstances.tenantId,
+      externalId: evolutionInstances.externalId,
+      baseUrl: evolutionInstances.baseUrl,
+      instanceName: evolutionInstances.instanceName,
     })
     .from(evolutionInstances)
     .where(eq(evolutionInstances.id, input.id))
@@ -135,6 +140,31 @@ export async function updateEvolutionInstanceById(input: {
     });
 
   if (!updated) return { error: "not_found" };
+  await recordTenantActivity({
+    tenantId: updated.tenantId,
+    actorUserId: input.actorUserId ?? null,
+    scope: "integrations",
+    action: "update",
+    notificationType: "integration_updated",
+    title: "Integração Evolution atualizada",
+    message: `Instância ${updated.instanceName?.trim() || updated.externalId} foi atualizada.`,
+    resourceType: "integration_evolution",
+    resourceId: updated.id,
+    oldValues: {
+      externalId: current.externalId,
+      baseUrl: current.baseUrl,
+      instanceName: current.instanceName,
+    },
+    newValues: {
+      externalId: updated.externalId,
+      baseUrl: updated.baseUrl,
+      instanceName: updated.instanceName,
+    },
+    metadata: {
+      provider: "evolution",
+      integrationId: updated.id,
+    },
+  });
   return updated;
 }
 
@@ -226,6 +256,7 @@ export async function updateUazapiInstanceById(input: {
   token?: string | null;
   adminToken?: string | null;
   legacyCredential?: string | null;
+  actorUserId?: string | null;
 }): Promise<
   | {
       id: string;
@@ -242,6 +273,9 @@ export async function updateUazapiInstanceById(input: {
     .select({
       id: uazapiInstances.id,
       tenantId: uazapiInstances.tenantId,
+      externalId: uazapiInstances.externalId,
+      baseUrl: uazapiInstances.baseUrl,
+      instanceName: uazapiInstances.instanceName,
     })
     .from(uazapiInstances)
     .where(eq(uazapiInstances.id, input.id))
@@ -362,5 +396,30 @@ export async function updateUazapiInstanceById(input: {
   }
 
   if (!updated) return { error: "not_found" };
+  await recordTenantActivity({
+    tenantId: updated.tenantId,
+    actorUserId: input.actorUserId ?? null,
+    scope: "integrations",
+    action: "update",
+    notificationType: "integration_updated",
+    title: "Integração UAZAPI atualizada",
+    message: `Instância ${updated.instanceName?.trim() || updated.externalId} foi atualizada.`,
+    resourceType: "integration_uazapi",
+    resourceId: updated.id,
+    oldValues: {
+      externalId: current.externalId,
+      baseUrl: current.baseUrl,
+      instanceName: current.instanceName,
+    },
+    newValues: {
+      externalId: updated.externalId,
+      baseUrl: updated.baseUrl,
+      instanceName: updated.instanceName,
+    },
+    metadata: {
+      provider: "uazapi",
+      integrationId: updated.id,
+    },
+  });
   return updated;
 }

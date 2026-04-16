@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui";
-import { Activity, ArrowRight, BookOpen, ExternalLink, Lock } from "lucide-react";
+import { Activity, ExternalLink, Lock } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BrandMark } from "@/components/brand-mark";
 import { SEO_APP_NAME } from "./seo";
@@ -50,15 +50,8 @@ export default function HomePage() {
 
       <nav className="relative z-10 flex w-full items-center justify-between py-6 px-6 sm:px-12 border-b border-brand-border/30">
         <BrandMark size="sm" />
-        
         <div className="flex items-center gap-4">
           <ThemeToggle />
-          <Link href="/admin-login">
-            <Button variant="secondary" size="md" className="gap-2 px-6 font-semibold border-brand-neon/50 text-brand-neon hover:bg-brand-neon/10 rounded-lg">
-              <ArrowRight className="h-4 w-4" />
-              Acesso Desenvolvedor
-            </Button>
-          </Link>
         </div>
       </nav>
 
