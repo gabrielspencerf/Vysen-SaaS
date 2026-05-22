@@ -5,6 +5,7 @@
  */
 
 import { eq } from "drizzle-orm";
+import { env } from "@/config/env";
 import { getDb } from "@/server/db";
 import { evolutionInstances } from "@/db/schema";
 import { verifyWebhookSignature } from "@/server/security/webhook-signature";
@@ -40,22 +41,26 @@ export async function validateEvolutionWebhook(
   }
 
   const secret = await getEvolutionInstanceSecret(instance.id);
-  if (secret) {
+  if (env.isProduction && !secret?.trim()) {
+    return {
+      error:
+        "Instância sem segredo configurado para validação criptográfica do webhook",
+      status: 503,
+    };
+  }
+
+  if (secret?.trim()) {
     const signatureCheck = verifyWebhookSignature({
       timestampHeader: request.headers.get("x-webhook-timestamp"),
       signatureHeader: request.headers.get("x-webhook-signature"),
       rawBody,
-      secret,
+      secret: secret.trim(),
     });
     if (!signatureCheck.ok) {
-      // Compatibilidade para integrações legadas (x-api-key).
-      const apiKeyHeader = request.headers.get("x-api-key")?.trim() ?? "";
-      if (!apiKeyHeader || apiKeyHeader !== secret) {
-        return {
-          error: signatureCheck.error,
-          status: signatureCheck.status,
-        };
-      }
+      return {
+        error: signatureCheck.error,
+        status: signatureCheck.status,
+      };
     }
   }
 

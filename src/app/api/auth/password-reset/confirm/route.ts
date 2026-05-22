@@ -1,10 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authFeatures } from "@/server/auth";
+import { checkRateLimit } from "@/server/security/rate-limit";
 import { resetPasswordByToken } from "@/server/auth/password-reset";
 
 export async function POST(request: NextRequest) {
   if (!authFeatures.passwordResetEnabled) {
     return NextResponse.json({ error: "Not Found" }, { status: 404 });
+  }
+
+  // Sem rate-limit aqui, um atacante poderia tentar adivinhar tokens
+  // (256 bits são improváveis de bruteforce, mas tokens leakados por logs / canais
+  // laterais podem ser testados em paralelo). 10 tentativas / 15min por IP é folgado
+  // para o usuário legítimo.
+  const limiter = await checkRateLimit({
+    request,
+    bucket: "auth-password-reset-confirm",
+    max: 10,
+    windowSeconds: 15 * 60,
+  });
+  if (!limiter.allowed) {
+    return NextResponse.json(
+      { error: "Muitas tentativas. Aguarde e tente novamente." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(limiter.retryAfterSeconds) },
+      }
+    );
   }
 
   let body: { token?: string; password?: string };

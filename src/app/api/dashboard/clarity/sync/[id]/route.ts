@@ -4,7 +4,7 @@ import { dashboardApiAuthErrorResponse } from "@/server/dashboard/api-route-erro
 import { PERMISSION_SLUGS } from "@/server/rbac";
 import { getClarityConnectionById } from "@/server/integrations/clarity/accounts";
 import { createRedisClient } from "@/server/redis";
-import { enqueue } from "@/workers/queue";
+import { enqueueWithDedup } from "@/workers/queue";
 
 export async function POST(
   request: NextRequest,
@@ -29,11 +29,16 @@ export async function POST(
   }
 
   const redis = createRedisClient();
+  let dedupResult = { enqueued: false };
   try {
-    await enqueue(redis, { type: "sync_clarity_connection", connectionId: id });
+    dedupResult = await enqueueWithDedup(
+      redis,
+      { type: "sync_clarity_connection", connectionId: id },
+      { dedupKey: `sync:clarity:${id}` }
+    );
   } finally {
-    redis.quit();
+    await redis.quit().catch(() => {});
   }
 
-  return NextResponse.json({ ok: true, enqueued: true });
+  return NextResponse.json({ ok: true, enqueued: dedupResult.enqueued });
 }

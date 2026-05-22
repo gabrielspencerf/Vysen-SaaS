@@ -145,6 +145,10 @@ export async function getSessionFromCookie(
 
 /**
  * Atualiza o current_tenant_id da sessão (troca de tenant). Não cria nova sessão.
+ *
+ * @deprecated Para troca de tenant prefira rotateSessionTenant, que emite um novo
+ * token. Manter current_tenant_id num token herdado mantém cookie pré-troca válido
+ * em outro dispositivo após escalada de privilégio.
  */
 export async function updateSessionTenant(
   sessionId: string,
@@ -155,6 +159,44 @@ export async function updateSessionTenant(
     .update(sessions)
     .set({ currentTenantId: tenantId, lastActivityAt: new Date() })
     .where(eq(sessions.id, sessionId));
+}
+
+/**
+ * Troca o tenant da sessão emitindo um novo token e invalidando a sessão antiga.
+ * Preserva o TTL restante. Caller deve setar Set-Cookie com o novo token.
+ *
+ * Retorna null se a sessão original não existir.
+ */
+export async function rotateSessionTenant(
+  oldSessionId: string,
+  newTenantId: string | null
+): Promise<{ token: string; maxAge: number } | null> {
+  const db = getDb();
+  const [row] = await db
+    .select({
+      userId: sessions.userId,
+      ipAddress: sessions.ipAddress,
+      userAgent: sessions.userAgent,
+      expiresAt: sessions.expiresAt,
+    })
+    .from(sessions)
+    .where(eq(sessions.id, oldSessionId))
+    .limit(1);
+  if (!row) return null;
+
+  const now = new Date();
+  const remainingMs = row.expiresAt.getTime() - now.getTime();
+  const ttlSeconds = Math.max(60, Math.floor(remainingMs / 1000));
+
+  const fresh = await createSession({
+    userId: row.userId,
+    currentTenantId: newTenantId,
+    ipAddress: row.ipAddress,
+    userAgent: row.userAgent,
+    ttlSeconds,
+  });
+  await invalidateSession(oldSessionId);
+  return fresh;
 }
 
 /**
@@ -202,9 +244,22 @@ export function buildSetCookieHeader(token: string, options?: { maxAge?: number 
 
 /**
  * Monta o header Set-Cookie para limpar o cookie (logout).
+ *
+ * IMPORTANTE: replica Secure/SameSite/Path do set; navegadores estritos rejeitam
+ * substituir um cookie Secure por non-Secure, o que deixaria o cookie original
+ * ativo após logout.
  */
 export function buildClearCookieHeader(): string {
-  return `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; Max-Age=0`;
+  const opts = authConfig.cookieOptions;
+  const parts = [
+    `${SESSION_COOKIE_NAME}=`,
+    `Path=${opts.path}`,
+    "HttpOnly",
+    opts.secure ? "Secure" : "",
+    `SameSite=${opts.sameSite}`,
+    "Max-Age=0",
+  ].filter(Boolean);
+  return parts.join("; ");
 }
 
 export function buildSetCsrfCookieFromSession(): string {

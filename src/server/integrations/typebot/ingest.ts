@@ -6,7 +6,7 @@
 import { and, eq } from "drizzle-orm";
 import { getDb } from "@/server/db";
 import { typebotWebhookEvents } from "@/db/schema";
-import { createRedisClient } from "@/server/redis";
+import { getSharedRedis } from "@/server/redis";
 import { enqueue } from "@/workers/queue";
 import type { JobProcessTypebotRaw } from "@/workers/queue/types";
 
@@ -62,18 +62,14 @@ export async function ingestTypebotWebhook(
     return { error: "Failed to persist event" };
   }
 
-  const redis = createRedisClient();
-  try {
-    const job: JobProcessTypebotRaw = {
-      type: "process_typebot_raw",
-      rawEventId: inserted.id,
-      tenantId: input.tenantId,
-      typebotBotId: input.typebotBotId,
-    };
-    await enqueue(redis, job);
-  } finally {
-    redis.quit();
-  }
+  const redis = getSharedRedis();
+  const job: JobProcessTypebotRaw = {
+    type: "process_typebot_raw",
+    rawEventId: inserted.id,
+    tenantId: input.tenantId,
+    typebotBotId: input.typebotBotId,
+  };
+  await enqueue(redis, job);
 
   return { rawEventId: inserted.id };
 }

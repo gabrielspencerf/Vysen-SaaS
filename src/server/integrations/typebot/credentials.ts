@@ -1,21 +1,12 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/server/db";
 import { typebotBots } from "@/db/schema";
-import { decryptSecret } from "@/server/security/secret-crypto";
+import { tryDecryptStoredSecret } from "@/server/security/secret-storage";
 
 export interface TypebotBotCredentials {
   webhookSecret: string | null;
   apiToken: string | null;
   metricsApiBaseUrl: string | null;
-}
-
-function maybeDecryptSecret(value: string | null | undefined): string | null {
-  if (!value) return null;
-  try {
-    return decryptSecret(value);
-  } catch {
-    return value;
-  }
 }
 
 export async function getTypebotBotCredentials(
@@ -34,8 +25,14 @@ export async function getTypebotBotCredentials(
 
   if (!bot) return null;
   return {
-    webhookSecret: maybeDecryptSecret(bot.webhookSecretEncrypted),
-    apiToken: maybeDecryptSecret(bot.apiTokenEncrypted),
+    webhookSecret: tryDecryptStoredSecret(
+      bot.webhookSecretEncrypted,
+      `typebot_bots.webhook_secret:${typebotBotId}`
+    ),
+    apiToken: tryDecryptStoredSecret(
+      bot.apiTokenEncrypted,
+      `typebot_bots.api_token:${typebotBotId}`
+    ),
     metricsApiBaseUrl: bot.metricsApiBaseUrl?.trim() || null,
   };
 }

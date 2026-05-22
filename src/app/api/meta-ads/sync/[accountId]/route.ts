@@ -7,7 +7,7 @@ import { requireAuth } from "@/server/auth";
 import { getCurrentMembership } from "@/server/tenancy/membership";
 import { getMetaAdsAccountById } from "@/server/integrations/meta-ads";
 import { createRedisClient } from "@/server/redis";
-import { enqueue } from "@/workers/queue";
+import { enqueueWithDedup } from "@/workers/queue";
 
 export async function POST(
   request: NextRequest,
@@ -51,18 +51,21 @@ export async function POST(
   }
 
   const redis = createRedisClient();
+  let dedupResult = { enqueued: false };
   try {
-    await enqueue(redis, {
-      type: "sync_meta_ads_account",
-      accountId,
-    });
+    dedupResult = await enqueueWithDedup(
+      redis,
+      { type: "sync_meta_ads_account", accountId },
+      { dedupKey: `sync:mads:${accountId}` }
+    );
   } finally {
-    redis.quit();
+    await redis.quit().catch(() => {});
   }
 
   const url = new URL(request.url);
+  const status = dedupResult.enqueued ? "enqueued" : "already_in_flight";
   return NextResponse.redirect(
-    `${url.origin}/dashboard/meta-ads?sync=enqueued`,
+    `${url.origin}/dashboard/meta-ads?sync=${status}`,
     { status: 302 }
   );
 }

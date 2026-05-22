@@ -1,57 +1,52 @@
-/**
- * Persistir evento em uazapi_webhook_events e publicar job na fila Redis.
- * Paridade com Evolution (ingestEvolutionWebhook).
- */
-
 import { and, eq } from "drizzle-orm";
 import { getDb } from "@/server/db";
-import { uazapiWebhookEvents } from "@/db/schema";
+import { chatwootWebhookEvents } from "@/db/schema";
 import { getSharedRedis } from "@/server/redis";
 import { enqueue } from "@/workers/queue";
-import type { JobProcessUazapiRaw } from "@/workers/queue/types";
+import type { JobProcessChatwootRaw } from "@/workers/queue/types";
 
-export interface UazapiIngestInput {
+export interface ChatwootIngestInput {
   tenantId: string;
-  uazapiInstanceId: string;
+  chatwootAccountId: string;
   eventType: string;
   payload: Record<string, unknown>;
   externalEventId: string | null;
 }
 
-export async function ingestUazapiWebhook(
-  input: UazapiIngestInput
+export async function ingestChatwootWebhook(
+  input: ChatwootIngestInput
 ): Promise<{ rawEventId: string } | { error: string }> {
   const db = getDb();
 
   let inserted: { id: string } | undefined;
   try {
     [inserted] = await db
-      .insert(uazapiWebhookEvents)
+      .insert(chatwootWebhookEvents)
       .values({
         tenantId: input.tenantId,
-        uazapiInstanceId: input.uazapiInstanceId,
+        chatwootAccountId: input.chatwootAccountId,
         eventType: input.eventType,
         payload: input.payload,
         externalEventId: input.externalEventId,
         receivedAt: new Date(),
       })
-      .returning({ id: uazapiWebhookEvents.id });
+      .returning({ id: chatwootWebhookEvents.id });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.includes("uazapi_webhook_events_dedup_unique")) {
+    if (!msg.includes("chatwoot_webhook_events_dedup_unique")) {
       throw err;
     }
   }
 
   if (!inserted && input.externalEventId) {
     const [existing] = await db
-      .select({ id: uazapiWebhookEvents.id })
-      .from(uazapiWebhookEvents)
+      .select({ id: chatwootWebhookEvents.id })
+      .from(chatwootWebhookEvents)
       .where(
         and(
-          eq(uazapiWebhookEvents.tenantId, input.tenantId),
-          eq(uazapiWebhookEvents.uazapiInstanceId, input.uazapiInstanceId),
-          eq(uazapiWebhookEvents.externalEventId, input.externalEventId)
+          eq(chatwootWebhookEvents.tenantId, input.tenantId),
+          eq(chatwootWebhookEvents.chatwootAccountId, input.chatwootAccountId),
+          eq(chatwootWebhookEvents.externalEventId, input.externalEventId)
         )
       )
       .limit(1);
@@ -65,11 +60,11 @@ export async function ingestUazapiWebhook(
   }
 
   const redis = getSharedRedis();
-  const job: JobProcessUazapiRaw = {
-    type: "process_uazapi_raw",
+  const job: JobProcessChatwootRaw = {
+    type: "process_chatwoot_raw",
     rawEventId: inserted.id,
     tenantId: input.tenantId,
-    uazapiInstanceId: input.uazapiInstanceId,
+    chatwootAccountId: input.chatwootAccountId,
   };
   await enqueue(redis, job);
 

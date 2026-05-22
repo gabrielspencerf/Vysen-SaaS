@@ -12,17 +12,34 @@ import {
   createSession,
   buildSetCookieHeader,
   buildSetCsrfCookieFromSession,
+  hashPassword,
   verifyPassword,
 } from "@/server/auth";
 import { chooseInitialTenantId } from "@/server/tenancy/choose-initial-tenant";
 import { isSuperAdmin } from "@/server/tenancy/membership";
 import { checkRateLimit } from "@/server/security/rate-limit";
-import { resetDbAccessContext } from "@/server/db/access-context";
+import { runWithRlsContext } from "@/server/db/access-context";
 
 const GENERIC_ERROR_MESSAGE = "Credenciais inválidas";
 
+// Hash Argon2id de uma senha qualquer ("dummy"). Calculado uma vez no boot, reusado
+// no caminho "usuário não existe / inativo" para que o tempo de resposta fique
+// próximo do caminho real (verifyPassword) — fechando o oracle de enumeração de
+// e-mails. Custos exatos não importam: só precisa que o `verify` chame o KDF.
+let DUMMY_HASH: string | null = null;
+let dummyHashInflight: Promise<string> | null = null;
+async function getDummyHash(): Promise<string> {
+  if (DUMMY_HASH) return DUMMY_HASH;
+  if (!dummyHashInflight) {
+    dummyHashInflight = hashPassword("dummy-not-a-real-secret").then((hash) => {
+      DUMMY_HASH = hash;
+      return hash;
+    });
+  }
+  return dummyHashInflight;
+}
+
 export async function POST(request: NextRequest) {
-  await resetDbAccessContext();
   let body: { email?: string; password?: string; remember_me?: boolean };
   try {
     body = await request.json();
@@ -55,64 +72,78 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: GENERIC_ERROR_MESSAGE }, { status: 401 });
   }
 
-  const db = getDb();
-  const [user] = await db
-    .select({
-      id: users.id,
-      email: users.email,
-      passwordHash: users.passwordHash,
-      isActive: users.isActive,
-    })
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1);
+  return runWithRlsContext({ tenantId: null, bypassRls: true }, async () => {
+    const db = getDb();
+    const [user] = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        passwordHash: users.passwordHash,
+        isActive: users.isActive,
+      })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
 
-  if (!user || !user.isActive) {
-    return NextResponse.json({ error: GENERIC_ERROR_MESSAGE }, { status: 401 });
-  }
+    if (!user || !user.isActive) {
+      // Roda Argon2 contra um hash dummy para que o tempo total se aproxime do
+      // caminho real. Sem isso, "email não cadastrado" responde em <10ms e
+      // "senha errada" em 50-200ms — vazando enumeração via timing.
+      try {
+        const dummy = await getDummyHash();
+        await verifyPassword(password || "x", dummy);
+      } catch {
+        // ignore — dummy verification não deve falhar; se falhar, prossegue.
+      }
+      return NextResponse.json({ error: GENERIC_ERROR_MESSAGE }, { status: 401 });
+    }
 
-  const valid = await verifyPassword(password, user.passwordHash);
-  if (!valid) {
-    return NextResponse.json({ error: GENERIC_ERROR_MESSAGE }, { status: 401 });
-  }
+    const valid = await verifyPassword(password, user.passwordHash);
+    if (!valid) {
+      return NextResponse.json({ error: GENERIC_ERROR_MESSAGE }, { status: 401 });
+    }
 
-  const membershipsWithTenant = await db
-    .select({
-      tenantId: tenants.id,
-      tenantName: tenants.name,
-      tenantSlug: tenants.slug,
-    })
-    .from(memberships)
-    .innerJoin(tenants, eq(memberships.tenantId, tenants.id))
-    .where(eq(memberships.userId, user.id));
+    const membershipsWithTenant = await db
+      .select({
+        tenantId: tenants.id,
+        tenantName: tenants.name,
+        tenantSlug: tenants.slug,
+      })
+      .from(memberships)
+      .innerJoin(tenants, eq(memberships.tenantId, tenants.id))
+      .where(eq(memberships.userId, user.id));
 
-  const initialTenantId = chooseInitialTenantId(membershipsWithTenant);
+    const initialTenantId = chooseInitialTenantId(membershipsWithTenant);
 
-  const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? request.headers.get("x-real-ip") ?? null;
-  const userAgent = request.headers.get("user-agent") ?? null;
+    const ipAddress =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      request.headers.get("x-real-ip") ??
+      null;
+    const userAgent = request.headers.get("user-agent") ?? null;
 
-  const ttlSeconds =
-    authFeatures.rememberMeEnabled && rememberMe
-      ? authConfig.rememberMeTtlSeconds
-      : authConfig.defaultSessionTtlSeconds;
+    const ttlSeconds =
+      authFeatures.rememberMeEnabled && rememberMe
+        ? authConfig.rememberMeTtlSeconds
+        : authConfig.defaultSessionTtlSeconds;
 
-  const session = await createSession({
-    userId: user.id,
-    currentTenantId: initialTenantId,
-    ipAddress,
-    userAgent,
-    ttlSeconds,
+    const session = await createSession({
+      userId: user.id,
+      currentTenantId: initialTenantId,
+      ipAddress,
+      userAgent,
+      ttlSeconds,
+    });
+
+    const superAdmin = await isSuperAdmin(user.id);
+    const response = NextResponse.json(
+      { ok: true, isSuperAdmin: superAdmin },
+      { status: 200 }
+    );
+    response.headers.append(
+      "Set-Cookie",
+      buildSetCookieHeader(session.token, { maxAge: session.maxAge })
+    );
+    response.headers.append("Set-Cookie", buildSetCsrfCookieFromSession());
+    return response;
   });
-
-  const superAdmin = await isSuperAdmin(user.id);
-  const response = NextResponse.json(
-    { ok: true, isSuperAdmin: superAdmin },
-    { status: 200 }
-  );
-  response.headers.append(
-    "Set-Cookie",
-    buildSetCookieHeader(session.token, { maxAge: session.maxAge })
-  );
-  response.headers.append("Set-Cookie", buildSetCsrfCookieFromSession());
-  return response;
 }

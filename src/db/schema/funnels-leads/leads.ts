@@ -25,7 +25,7 @@ export const leads = pgTable(
     tenantId: uuid("tenant_id")
       .notNull()
       .references(() => tenants.id, { onDelete: "cascade" }),
-    status: leadStatusEnum("status").notNull(),
+    status: leadStatusEnum("status").notNull().default("new"),
     sourceIntegrationId: uuid("source_integration_id").references(() => integrations.id, {
       onDelete: "set null",
     }),

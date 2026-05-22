@@ -7,7 +7,7 @@
 import { and, eq } from "drizzle-orm";
 import { getDb } from "@/server/db";
 import { evolutionWebhookEvents } from "@/db/schema";
-import { createRedisClient } from "@/server/redis";
+import { getSharedRedis } from "@/server/redis";
 import { enqueue } from "@/workers/queue";
 import type { JobProcessEvolutionRaw } from "@/workers/queue/types";
 
@@ -65,18 +65,14 @@ export async function ingestEvolutionWebhook(
     return { error: "Failed to persist event" };
   }
 
-  const redis = createRedisClient();
-  try {
-    const job: JobProcessEvolutionRaw = {
-      type: "process_evolution_raw",
-      rawEventId: inserted.id,
-      tenantId: input.tenantId,
-      evolutionInstanceId: input.evolutionInstanceId,
-    };
-    await enqueue(redis, job);
-  } finally {
-    redis.quit();
-  }
+  const redis = getSharedRedis();
+  const job: JobProcessEvolutionRaw = {
+    type: "process_evolution_raw",
+    rawEventId: inserted.id,
+    tenantId: input.tenantId,
+    evolutionInstanceId: input.evolutionInstanceId,
+  };
+  await enqueue(redis, job);
 
   return { rawEventId: inserted.id };
 }

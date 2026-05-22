@@ -5,16 +5,32 @@
 
 const SEP = ",";
 const QUOTE = '"';
+// Caracteres que Excel/Sheets/LibreOffice interpretam como início de fórmula.
+// Prefixar com apóstrofo é o padrão aceito (OWASP CSV Injection).
+const FORMULA_TRIGGERS = new Set(["=", "+", "-", "@", "\t", "\r"]);
 
 /**
- * Escapa um valor para CSV: se contém vírgula, quebra de linha ou aspas, envolve em aspas e duplica aspas internas.
+ * Neutraliza CSV injection: se o valor começa com =, +, -, @, tab ou CR, prefixa
+ * com apóstrofo para que o app de planilha trate como texto, não fórmula.
+ * Telefones como "+5511..." perdem o "+" exibido (vira `'+5511...`) — tradeoff
+ * consciente: segurança > fidelidade visual no export. Use export JSON se a
+ * fidelidade dos campos for crítica.
+ */
+function neutralizeFormulaPrefix(s: string): string {
+  if (s.length === 0) return s;
+  return FORMULA_TRIGGERS.has(s[0]!) ? `'${s}` : s;
+}
+
+/**
+ * Escapa um valor para CSV: neutraliza prefixo de fórmula e, se contém vírgula,
+ * quebra de linha ou aspas, envolve em aspas e duplica aspas internas.
  */
 export function escapeCsvValue(value: string): string {
-  const s = String(value ?? "");
-  if (s.includes(QUOTE) || s.includes(SEP) || s.includes("\n") || s.includes("\r")) {
-    return QUOTE + s.replaceAll(QUOTE, QUOTE + QUOTE) + QUOTE;
+  const safe = neutralizeFormulaPrefix(String(value ?? ""));
+  if (safe.includes(QUOTE) || safe.includes(SEP) || safe.includes("\n") || safe.includes("\r")) {
+    return QUOTE + safe.replaceAll(QUOTE, QUOTE + QUOTE) + QUOTE;
   }
-  return s;
+  return safe;
 }
 
 /**

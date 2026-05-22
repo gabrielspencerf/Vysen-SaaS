@@ -11,8 +11,16 @@ import path from "path";
 
 const UPLOAD_DIR = "uploads";
 
-function getAbsolutePath(relativeKey: string): string {
-  return path.join(process.cwd(), UPLOAD_DIR, relativeKey);
+function resolveSafeAssetPath(relativeKey: string): string | null {
+  // Bloqueia qualquer fileKey que escape do diretório de uploads via "..", caminhos
+  // absolutos, ou separadores específicos da plataforma. path.resolve normaliza
+  // segmentos; startsWith garante que o arquivo final fica dentro do uploadDir.
+  const uploadDir = path.resolve(process.cwd(), UPLOAD_DIR);
+  const resolved = path.resolve(uploadDir, relativeKey);
+  if (resolved !== uploadDir && !resolved.startsWith(uploadDir + path.sep)) {
+    return null;
+  }
+  return resolved;
 }
 
 export async function GET(
@@ -44,7 +52,13 @@ export async function GET(
     );
   }
 
-  const absolutePath = getAbsolutePath(asset.fileKey);
+  const absolutePath = resolveSafeAssetPath(asset.fileKey);
+  if (!absolutePath) {
+    return NextResponse.json(
+      { error: "Arquivo inválido" },
+      { status: 400 }
+    );
+  }
   let buffer: Buffer;
   try {
     buffer = await readFile(absolutePath);

@@ -5,26 +5,32 @@
 import { isNull, sql } from "drizzle-orm";
 import { getDb } from "@/server/db";
 import {
+  chatwootWebhookEvents,
   evolutionWebhookEvents,
   typebotWebhookEvents,
   uazapiWebhookEvents,
+  whatsappCloudWebhookEvents,
 } from "@/db/schema";
 import { createRedisClient } from "@/server/redis";
 import { HEARTBEAT_KEY, MAX_AGE_MS } from "@/workers/readiness";
 import {
   DLQ_AI_CLASSIFICATION,
   DLQ_FOLLOWUP_DUE_TENANT,
+  DLQ_RAW_CHATWOOT,
   DLQ_RAW_EVOLUTION,
   DLQ_RAW_TYPEBOT,
   DLQ_RAW_UAZAPI,
+  DLQ_RAW_WHATSAPP_CLOUD,
   DLQ_SYNC_CLARITY,
   DLQ_SYNC_GOOGLE_ADS,
   DLQ_SYNC_META_ADS,
   QUEUE_AI_CLASSIFICATION,
   QUEUE_FOLLOWUP_DUE_TENANT,
+  QUEUE_RAW_CHATWOOT,
   QUEUE_RAW_EVOLUTION,
   QUEUE_RAW_TYPEBOT,
   QUEUE_RAW_UAZAPI,
+  QUEUE_RAW_WHATSAPP_CLOUD,
   QUEUE_SYNC_CLARITY,
   QUEUE_SYNC_GOOGLE_ADS,
   QUEUE_SYNC_META_ADS,
@@ -135,6 +141,82 @@ export const WORKER_PIPELINE_GROUPS: WorkerPipelineGroupDef[] = [
             kind: "worker",
             title: "Worker",
             detail: "processUazapiRaw — conversa e mensagem (paridade Evolution)",
+          },
+          {
+            kind: "output",
+            title: "Persistência",
+            detail: "conversations · conversation_messages · contacts",
+          },
+        ],
+      },
+      {
+        id: "chatwoot",
+        label: "Chatwoot",
+        description: "Conversas vindas do Chatwoot via webhook → fila → conversas/mensagens.",
+        queueName: QUEUE_RAW_CHATWOOT,
+        dlqName: DLQ_RAW_CHATWOOT,
+        jobType: "process_chatwoot_raw",
+        processorFile: "processors/chatwoot.ts",
+        steps: [
+          {
+            kind: "ingress",
+            title: "Webhook HTTP",
+            detail: "POST /api/webhooks/chatwoot/[accountId]",
+          },
+          {
+            kind: "table",
+            title: "Staging",
+            detail: "chatwoot_webhook_events",
+            metricKey: "pending_chatwoot_raw",
+          },
+          {
+            kind: "queue",
+            title: "Fila Redis",
+            detail: QUEUE_RAW_CHATWOOT,
+            metricKey: "queue_chatwoot",
+          },
+          {
+            kind: "worker",
+            title: "Worker",
+            detail: "processChatwootRaw — conversas, mensagens, contato",
+          },
+          {
+            kind: "output",
+            title: "Persistência",
+            detail: "conversations · conversation_messages · contacts · enqueue classify_conversation",
+          },
+        ],
+      },
+      {
+        id: "whatsapp_cloud",
+        label: "WhatsApp Cloud",
+        description: "Cloud API oficial da Meta: webhook → staging → fila → conversas.",
+        queueName: QUEUE_RAW_WHATSAPP_CLOUD,
+        dlqName: DLQ_RAW_WHATSAPP_CLOUD,
+        jobType: "process_whatsapp_cloud_raw",
+        processorFile: "processors/whatsapp-cloud.ts",
+        steps: [
+          {
+            kind: "ingress",
+            title: "Webhook HTTP",
+            detail: "POST /api/webhooks/whatsapp-cloud/[numberId]",
+          },
+          {
+            kind: "table",
+            title: "Staging",
+            detail: "wc_webhook_events",
+            metricKey: "pending_whatsapp_cloud_raw",
+          },
+          {
+            kind: "queue",
+            title: "Fila Redis",
+            detail: QUEUE_RAW_WHATSAPP_CLOUD,
+            metricKey: "queue_whatsapp_cloud",
+          },
+          {
+            kind: "worker",
+            title: "Worker",
+            detail: "processWhatsappCloudRaw — conversas, mensagens, statuses",
           },
           {
             kind: "output",
@@ -371,6 +453,8 @@ export interface QueueDepths {
   typebot: number;
   evolution: number;
   uazapi: number;
+  chatwoot: number;
+  whatsappCloud: number;
   googleAds: number;
   metaAds: number;
   clarity: number;
@@ -379,6 +463,8 @@ export interface QueueDepths {
   dlqTypebot: number;
   dlqEvolution: number;
   dlqUazapi: number;
+  dlqChatwoot: number;
+  dlqWhatsappCloud: number;
   dlqGoogleAds: number;
   dlqMetaAds: number;
   dlqClarity: number;
@@ -390,6 +476,8 @@ export interface PendingRawCounts {
   evolution: number;
   uazapi: number;
   typebot: number;
+  chatwoot: number;
+  whatsappCloud: number;
 }
 
 export interface WorkerPipelineSnapshot {
@@ -410,6 +498,10 @@ function metricForPipeline(pipelineId: string, depths: QueueDepths): { q: number
       return { q: depths.evolution, dlq: depths.dlqEvolution };
     case "uazapi":
       return { q: depths.uazapi, dlq: depths.dlqUazapi };
+    case "chatwoot":
+      return { q: depths.chatwoot, dlq: depths.dlqChatwoot };
+    case "whatsapp_cloud":
+      return { q: depths.whatsappCloud, dlq: depths.dlqWhatsappCloud };
     case "typebot":
       return { q: depths.typebot, dlq: depths.dlqTypebot };
     case "ai_classification":
@@ -429,29 +521,32 @@ function metricForPipeline(pipelineId: string, depths: QueueDepths): { q: number
 
 export { metricForPipeline };
 
+const EMPTY_DEPTHS: QueueDepths = {
+  typebot: 0,
+  evolution: 0,
+  uazapi: 0,
+  chatwoot: 0,
+  whatsappCloud: 0,
+  googleAds: 0,
+  metaAds: 0,
+  clarity: 0,
+  aiClassification: 0,
+  followupDue: 0,
+  dlqTypebot: 0,
+  dlqEvolution: 0,
+  dlqUazapi: 0,
+  dlqChatwoot: 0,
+  dlqWhatsappCloud: 0,
+  dlqGoogleAds: 0,
+  dlqMetaAds: 0,
+  dlqClarity: 0,
+  dlqAiClassification: 0,
+  dlqFollowupDue: 0,
+};
+
 async function loadQueueDepths(): Promise<{ redisOk: boolean; depths: QueueDepths }> {
   if (!process.env.REDIS_URL) {
-    return {
-      redisOk: false,
-      depths: {
-        typebot: 0,
-        evolution: 0,
-        uazapi: 0,
-        googleAds: 0,
-        metaAds: 0,
-        clarity: 0,
-        aiClassification: 0,
-        followupDue: 0,
-        dlqTypebot: 0,
-        dlqEvolution: 0,
-        dlqUazapi: 0,
-        dlqGoogleAds: 0,
-        dlqMetaAds: 0,
-        dlqClarity: 0,
-        dlqAiClassification: 0,
-        dlqFollowupDue: 0,
-      },
-    };
+    return { redisOk: false, depths: { ...EMPTY_DEPTHS } };
   }
   const redis = createRedisClient();
   try {
@@ -459,6 +554,8 @@ async function loadQueueDepths(): Promise<{ redisOk: boolean; depths: QueueDepth
       typebot,
       evolution,
       uazapi,
+      chatwoot,
+      whatsappCloud,
       googleAds,
       metaAds,
       clarity,
@@ -467,6 +564,8 @@ async function loadQueueDepths(): Promise<{ redisOk: boolean; depths: QueueDepth
       dlqTypebot,
       dlqEvolution,
       dlqUazapi,
+      dlqChatwoot,
+      dlqWhatsappCloud,
       dlqGoogleAds,
       dlqMetaAds,
       dlqClarity,
@@ -476,6 +575,8 @@ async function loadQueueDepths(): Promise<{ redisOk: boolean; depths: QueueDepth
       redis.llen(QUEUE_RAW_TYPEBOT),
       redis.llen(QUEUE_RAW_EVOLUTION),
       redis.llen(QUEUE_RAW_UAZAPI),
+      redis.llen(QUEUE_RAW_CHATWOOT),
+      redis.llen(QUEUE_RAW_WHATSAPP_CLOUD),
       redis.llen(QUEUE_SYNC_GOOGLE_ADS),
       redis.llen(QUEUE_SYNC_META_ADS),
       redis.llen(QUEUE_SYNC_CLARITY),
@@ -484,6 +585,8 @@ async function loadQueueDepths(): Promise<{ redisOk: boolean; depths: QueueDepth
       redis.llen(DLQ_RAW_TYPEBOT),
       redis.llen(DLQ_RAW_EVOLUTION),
       redis.llen(DLQ_RAW_UAZAPI),
+      redis.llen(DLQ_RAW_CHATWOOT),
+      redis.llen(DLQ_RAW_WHATSAPP_CLOUD),
       redis.llen(DLQ_SYNC_GOOGLE_ADS),
       redis.llen(DLQ_SYNC_META_ADS),
       redis.llen(DLQ_SYNC_CLARITY),
@@ -496,6 +599,8 @@ async function loadQueueDepths(): Promise<{ redisOk: boolean; depths: QueueDepth
         typebot,
         evolution,
         uazapi,
+        chatwoot,
+        whatsappCloud,
         googleAds,
         metaAds,
         clarity,
@@ -504,6 +609,8 @@ async function loadQueueDepths(): Promise<{ redisOk: boolean; depths: QueueDepth
         dlqTypebot,
         dlqEvolution,
         dlqUazapi,
+        dlqChatwoot,
+        dlqWhatsappCloud,
         dlqGoogleAds,
         dlqMetaAds,
         dlqClarity,
@@ -512,29 +619,9 @@ async function loadQueueDepths(): Promise<{ redisOk: boolean; depths: QueueDepth
       },
     };
   } catch {
-    return {
-      redisOk: false,
-      depths: {
-        typebot: 0,
-        evolution: 0,
-        uazapi: 0,
-        googleAds: 0,
-        metaAds: 0,
-        clarity: 0,
-        aiClassification: 0,
-        followupDue: 0,
-        dlqTypebot: 0,
-        dlqEvolution: 0,
-        dlqUazapi: 0,
-        dlqGoogleAds: 0,
-        dlqMetaAds: 0,
-        dlqClarity: 0,
-        dlqAiClassification: 0,
-        dlqFollowupDue: 0,
-      },
-    };
+    return { redisOk: false, depths: { ...EMPTY_DEPTHS } };
   } finally {
-    redis.quit();
+    await redis.quit().catch(() => {});
   }
 }
 
@@ -547,7 +634,7 @@ async function loadPendingRawCounts(): Promise<PendingRawCounts> {
       return fallback;
     }
   };
-  const [evo, uaz, tb] = await Promise.all([
+  const [evo, uaz, tb, cw, wc] = await Promise.all([
     safe(async () => {
       const [row] = await db
         .select({ n: sql<number>`count(*)::int` })
@@ -569,8 +656,22 @@ async function loadPendingRawCounts(): Promise<PendingRawCounts> {
         .where(isNull(typebotWebhookEvents.processedAt));
       return Number(row?.n ?? 0);
     }, 0),
+    safe(async () => {
+      const [row] = await db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(chatwootWebhookEvents)
+        .where(isNull(chatwootWebhookEvents.processedAt));
+      return Number(row?.n ?? 0);
+    }, 0),
+    safe(async () => {
+      const [row] = await db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(whatsappCloudWebhookEvents)
+        .where(isNull(whatsappCloudWebhookEvents.processedAt));
+      return Number(row?.n ?? 0);
+    }, 0),
   ]);
-  return { evolution: evo, uazapi: uaz, typebot: tb };
+  return { evolution: evo, uazapi: uaz, typebot: tb, chatwoot: cw, whatsappCloud: wc };
 }
 
 async function loadWorkerHeartbeat(): Promise<{
@@ -599,7 +700,7 @@ async function loadWorkerHeartbeat(): Promise<{
   } catch {
     return { status: "missing", ageMs: null, lastAt: null };
   } finally {
-    redis.quit();
+    await redis.quit().catch(() => {});
   }
 }
 
@@ -614,6 +715,8 @@ export async function getWorkerPipelineSnapshot(): Promise<WorkerPipelineSnapsho
     depths.typebot +
     depths.evolution +
     depths.uazapi +
+    depths.chatwoot +
+    depths.whatsappCloud +
     depths.googleAds +
     depths.metaAds +
     depths.clarity +
@@ -624,6 +727,8 @@ export async function getWorkerPipelineSnapshot(): Promise<WorkerPipelineSnapsho
     depths.dlqTypebot +
     depths.dlqEvolution +
     depths.dlqUazapi +
+    depths.dlqChatwoot +
+    depths.dlqWhatsappCloud +
     depths.dlqGoogleAds +
     depths.dlqMetaAds +
     depths.dlqClarity +
@@ -651,6 +756,8 @@ export function pendingCountForMetricKey(
   if (key === "pending_evolution_raw") return pending.evolution;
   if (key === "pending_uazapi_raw") return pending.uazapi;
   if (key === "pending_typebot_raw") return pending.typebot;
+  if (key === "pending_chatwoot_raw") return pending.chatwoot;
+  if (key === "pending_whatsapp_cloud_raw") return pending.whatsappCloud;
   return undefined;
 }
 
@@ -663,6 +770,8 @@ export function queueDepthForMetricKey(
     queue_evolution: { main: "evolution", dlq: "dlqEvolution" },
     queue_uazapi: { main: "uazapi", dlq: "dlqUazapi" },
     queue_typebot: { main: "typebot", dlq: "dlqTypebot" },
+    queue_chatwoot: { main: "chatwoot", dlq: "dlqChatwoot" },
+    queue_whatsapp_cloud: { main: "whatsappCloud", dlq: "dlqWhatsappCloud" },
     queue_ai_classification: { main: "aiClassification", dlq: "dlqAiClassification" },
     queue_followup_due: { main: "followupDue", dlq: "dlqFollowupDue" },
     queue_google_ads: { main: "googleAds", dlq: "dlqGoogleAds" },

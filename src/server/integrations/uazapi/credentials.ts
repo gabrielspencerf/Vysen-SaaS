@@ -1,15 +1,14 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/server/db";
 import { uazapiInstances } from "@/db/schema";
-import { decryptSecret } from "@/server/security/secret-crypto";
+import { tryDecryptStoredSecret } from "@/server/security/secret-storage";
 
-function resolveSecret(encrypted: string | null): string | null {
-  if (!encrypted) return null;
-  try {
-    return decryptSecret(encrypted);
-  } catch {
-    return encrypted;
-  }
+function resolveSecret(
+  encrypted: string | null,
+  field: string,
+  instanceId: string
+): string | null {
+  return tryDecryptStoredSecret(encrypted, `uazapi_instances.${field}:${instanceId}`);
 }
 
 export interface UazapiInstanceCredentials {
@@ -61,9 +60,13 @@ export async function getUazapiInstanceCredentials(
   }
 
   return {
-    apiKey: resolveSecret(instance?.apiKeyEncrypted ?? null),
-    token: resolveSecret(instance?.tokenEncrypted ?? null),
-    adminToken: resolveSecret(instance?.adminTokenEncrypted ?? null),
+    apiKey: resolveSecret(instance?.apiKeyEncrypted ?? null, "api_key", uazapiInstanceId),
+    token: resolveSecret(instance?.tokenEncrypted ?? null, "token", uazapiInstanceId),
+    adminToken: resolveSecret(
+      instance?.adminTokenEncrypted ?? null,
+      "admin_token",
+      uazapiInstanceId
+    ),
   };
 }
 
@@ -71,5 +74,7 @@ export async function getUazapiInstanceSecret(
   uazapiInstanceId: string
 ): Promise<string | null> {
   const credentials = await getUazapiInstanceCredentials(uazapiInstanceId);
-  return credentials.apiKey ?? credentials.token ?? null;
+  return (
+    credentials.apiKey ?? credentials.token ?? credentials.adminToken ?? null
+  );
 }

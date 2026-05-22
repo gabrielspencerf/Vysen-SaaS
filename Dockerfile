@@ -50,8 +50,20 @@ COPY src ./src
 COPY scripts ./scripts
 COPY drizzle.config.ts tsconfig.json ./
 
+# Entrypoint que carrega /run/secrets/* como env vars (Docker Swarm / K8s).
+# Compatível com dev: sem /run/secrets, passa direto.
+COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 USER nextjs
 EXPOSE 3000
 
+# Healthcheck: usa o endpoint público minimal /api/health (verifica só DB).
+# Swarm/Traefik usa para decidir rotear tráfego. Worker stale NÃO marca unhealthy
+# (detalhes ficam em /api/health/details).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD wget --quiet --spider --tries=1 http://127.0.0.1:3000/api/health || exit 1
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 # Padrão: servidor Next.js. No compose o worker sobrescreve com command.
 CMD ["node", "server.js"]

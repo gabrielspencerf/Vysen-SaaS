@@ -56,8 +56,13 @@ export async function listTenantAssets(
   }));
 }
 
-function getAbsolutePath(relativeKey: string): string {
-  return path.join(process.cwd(), UPLOAD_DIR, relativeKey);
+function resolveSafePath(relativeKey: string): string | null {
+  const uploadDir = path.resolve(process.cwd(), UPLOAD_DIR);
+  const resolved = path.resolve(uploadDir, relativeKey);
+  if (resolved !== uploadDir && !resolved.startsWith(uploadDir + path.sep)) {
+    return null;
+  }
+  return resolved;
 }
 
 export async function createTenantAsset(
@@ -83,7 +88,10 @@ export async function createTenantAsset(
   const ext = input.contentType === "image/jpeg" ? "jpg" : input.contentType.split("/")[1]?.slice(0, 4) ?? "bin";
   const filename = `${crypto.randomUUID()}.${ext}`;
   const relativeKey = `${tenantId}/${input.kind}/${filename}`;
-  const absolutePath = getAbsolutePath(relativeKey);
+  const absolutePath = resolveSafePath(relativeKey);
+  if (!absolutePath) {
+    return { ok: false, error: "Caminho de arquivo inválido." };
+  }
 
   await mkdir(path.dirname(absolutePath), { recursive: true });
   await writeFile(absolutePath, input.buffer);
@@ -127,8 +135,10 @@ export async function deleteTenantAsset(
   const db = getDb();
   const asset = await getTenantAssetById(tenantId, assetId);
   if (!asset) return { ok: false, error: "not_found" };
-  const absolutePath = getAbsolutePath(asset.fileKey);
-  await unlink(absolutePath).catch(() => {});
+  const absolutePath = resolveSafePath(asset.fileKey);
+  if (absolutePath) {
+    await unlink(absolutePath).catch(() => {});
+  }
   await db
     .delete(tenantAssets)
     .where(and(eq(tenantAssets.tenantId, tenantId), eq(tenantAssets.id, assetId)));

@@ -14,7 +14,7 @@ import { chooseInitialTenantId } from "@/server/tenancy/choose-initial-tenant";
 import { memberships, tenants } from "@/db/schema";
 import { exchangeGoogleCodeForUser, readGoogleState } from "@/server/auth/google-oauth";
 import { sanitizeOAuthRedirect } from "@/server/security/redirect-policy";
-import { resetDbAccessContext } from "@/server/db/access-context";
+import { runWithRlsContext } from "@/server/db/access-context";
 
 function redirectWithError(request: NextRequest, to: string, code: string) {
   const url = new URL(to, request.url);
@@ -23,7 +23,6 @@ function redirectWithError(request: NextRequest, to: string, code: string) {
 }
 
 export async function GET(request: NextRequest) {
-  await resetDbAccessContext();
   if (!authFeatures.googleLoginEnabled) {
     return redirectWithError(request, "/login", "google_disabled");
   }
@@ -50,61 +49,63 @@ export async function GET(request: NextRequest) {
       return redirectWithError(request, isAdminFlow ? "/admin-login" : "/login", "google_not_verified");
     }
 
-    const db = getDb();
-    const [user] = await db
-      .select({
-        id: users.id,
-        email: users.email,
-        isActive: users.isActive,
-      })
-      .from(users)
-      .where(eq(users.email, oauthUser.email.toLowerCase()))
-      .limit(1);
+    return await runWithRlsContext({ tenantId: null, bypassRls: true }, async () => {
+      const db = getDb();
+      const [user] = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          isActive: users.isActive,
+        })
+        .from(users)
+        .where(eq(users.email, oauthUser.email.toLowerCase()))
+        .limit(1);
 
-    if (!user || !user.isActive) {
-      return redirectWithError(request, isAdminFlow ? "/admin-login" : "/login", "google_invite_only");
-    }
-
-    const membershipsWithTenant = await db
-      .select({
-        tenantId: tenants.id,
-        tenantName: tenants.name,
-        tenantSlug: tenants.slug,
-      })
-      .from(memberships)
-      .innerJoin(tenants, eq(memberships.tenantId, tenants.id))
-      .where(eq(memberships.userId, user.id));
-    const initialTenantId = chooseInitialTenantId(membershipsWithTenant);
-
-    const ttlSeconds = remember
-      ? authConfig.rememberMeTtlSeconds
-      : authConfig.defaultSessionTtlSeconds;
-    const session = await createSession({
-      userId: user.id,
-      currentTenantId: initialTenantId,
-      ipAddress:
-        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-        request.headers.get("x-real-ip") ??
-        null,
-      userAgent: request.headers.get("user-agent") ?? null,
-      ttlSeconds,
-    });
-
-    if (isAdminFlow) {
-      const superAdmin = await isSuperAdmin(user.id);
-      if (!superAdmin) {
-        return redirectWithError(request, "/admin-login", "google_forbidden");
+      if (!user || !user.isActive) {
+        return redirectWithError(request, isAdminFlow ? "/admin-login" : "/login", "google_invite_only");
       }
-    }
 
-    const target = isAdminFlow ? "/admin" : from;
-    const response = NextResponse.redirect(new URL(target, request.url));
-    response.headers.append(
-      "Set-Cookie",
-      buildSetCookieHeader(session.token, { maxAge: session.maxAge })
-    );
-    response.headers.append("Set-Cookie", buildSetCsrfCookieFromSession());
-    return response;
+      if (isAdminFlow) {
+        const superAdmin = await isSuperAdmin(user.id);
+        if (!superAdmin) {
+          return redirectWithError(request, "/admin-login", "google_forbidden");
+        }
+      }
+
+      const membershipsWithTenant = await db
+        .select({
+          tenantId: tenants.id,
+          tenantName: tenants.name,
+          tenantSlug: tenants.slug,
+        })
+        .from(memberships)
+        .innerJoin(tenants, eq(memberships.tenantId, tenants.id))
+        .where(eq(memberships.userId, user.id));
+      const initialTenantId = chooseInitialTenantId(membershipsWithTenant);
+
+      const ttlSeconds = remember
+        ? authConfig.rememberMeTtlSeconds
+        : authConfig.defaultSessionTtlSeconds;
+      const session = await createSession({
+        userId: user.id,
+        currentTenantId: initialTenantId,
+        ipAddress:
+          request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+          request.headers.get("x-real-ip") ??
+          null,
+        userAgent: request.headers.get("user-agent") ?? null,
+        ttlSeconds,
+      });
+
+      const target = isAdminFlow ? "/admin" : from;
+      const response = NextResponse.redirect(new URL(target, request.url));
+      response.headers.append(
+        "Set-Cookie",
+        buildSetCookieHeader(session.token, { maxAge: session.maxAge })
+      );
+      response.headers.append("Set-Cookie", buildSetCsrfCookieFromSession());
+      return response;
+    });
   } catch {
     return redirectWithError(request, isAdminFlow ? "/admin-login" : "/login", "google_failed");
   }

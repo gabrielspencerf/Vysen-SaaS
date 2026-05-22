@@ -84,12 +84,13 @@ export async function sendCapiEvents(
   accessToken: string,
   events: Record<string, unknown>[]
 ): Promise<{ eventsReceived?: number } | { error: string }> {
-  const url = new URL(`${graphApiBaseUrl()}/${encodeURIComponent(pixelId)}/events`);
-  url.searchParams.set("access_token", accessToken);
-  const res = await fetch(url.toString(), {
+  // Token vai no body (Graph API aceita) para evitar que apareça em logs de proxy/CDN
+  // — antes era enviado via query string.
+  const url = `${graphApiBaseUrl()}/${encodeURIComponent(pixelId)}/events`;
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ data: events }),
+    body: JSON.stringify({ data: events, access_token: accessToken }),
   });
   const data = (await res.json()) as {
     events_received?: number;

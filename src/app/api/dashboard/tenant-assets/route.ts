@@ -31,6 +31,17 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(serialized);
 }
 
+// Espelha limites da camada server (createTenantAsset). Validados na rota antes
+// de buferizar para falhar cedo em uploads maliciosos.
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+const ALLOWED_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "application/pdf",
+]);
+
 export async function POST(request: NextRequest) {
   let session;
   try {
@@ -40,6 +51,15 @@ export async function POST(request: NextRequest) {
   }
 
   const tenantId = session.session.currentTenantId!;
+
+  // Reject early com base no Content-Length (multipart tem overhead, margem 64KB).
+  const contentLength = Number(request.headers.get("content-length") ?? "0");
+  if (Number.isFinite(contentLength) && contentLength > MAX_FILE_SIZE_BYTES + 64 * 1024) {
+    return NextResponse.json(
+      { error: `Arquivo muito grande. Máximo ${MAX_FILE_SIZE_BYTES / 1024 / 1024} MB.` },
+      { status: 413 }
+    );
+  }
 
   let formData: FormData;
   try {
@@ -56,6 +76,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "Campo 'file' é obrigatório." },
       { status: 400 }
+    );
+  }
+
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    return NextResponse.json(
+      { error: `Arquivo muito grande. Máximo ${MAX_FILE_SIZE_BYTES / 1024 / 1024} MB.` },
+      { status: 413 }
+    );
+  }
+
+  if (!ALLOWED_TYPES.has(file.type)) {
+    return NextResponse.json(
+      { error: "Tipo de arquivo não permitido (use imagem ou PDF)." },
+      { status: 415 }
     );
   }
 

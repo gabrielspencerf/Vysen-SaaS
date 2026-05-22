@@ -187,6 +187,12 @@ export async function searchKnowledge(input: KnowledgeSearchInput): Promise<Know
     text: query,
   });
   const vectorLiteral = toPgVectorLiteral(embedding);
+  // Filtro por escopo separado em dois caminhos. O caminho global EXIGE tenant_id IS NULL —
+  // assim um doc tenant marcado erroneamente como scope='global' nunca vaza em buscas globais.
+  const scopeFilter =
+    scope === "global"
+      ? sql`kd.scope = 'global' AND kd.tenant_id IS NULL`
+      : sql`kd.scope = 'tenant' AND kd.tenant_id = ${tenantId}`;
   const rows = (await db.execute<{
     chunkId: string;
     documentId: string;
@@ -208,8 +214,7 @@ export async function searchKnowledge(input: KnowledgeSearchInput): Promise<Know
     INNER JOIN knowledge_chunks kc ON kc.id = ke.chunk_id
     INNER JOIN knowledge_documents kd ON kd.id = kc.document_id
     WHERE kd.is_active = true
-      AND kd.scope = ${scope}
-      AND (${tenantId}::uuid IS NULL OR kd.tenant_id = ${tenantId})
+      AND ${scopeFilter}
     ORDER BY ke.embedding <=> ${vectorLiteral}::vector
     LIMIT ${limit}
   `)) as unknown as Array<{

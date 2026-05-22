@@ -6,6 +6,7 @@ export {
   createSession,
   getSessionFromCookie,
   updateSessionTenant,
+  rotateSessionTenant,
   invalidateSession,
   invalidateCurrent,
   invalidateAllSessionsForUser,

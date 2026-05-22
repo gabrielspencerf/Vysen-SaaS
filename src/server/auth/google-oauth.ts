@@ -16,7 +16,15 @@ function fromB64url(input: string): string {
 }
 
 function stateSecret(): string {
-  return process.env.GOOGLE_AUTH_STATE_SECRET || process.env.SESSION_SECRET || "fallback";
+  const secret = process.env.GOOGLE_AUTH_STATE_SECRET || process.env.SESSION_SECRET;
+  if (!secret) {
+    // Lançar é o comportamento correto: state HMAC com segredo previsível ("fallback")
+    // permite forjar state arbitrário, anulando a proteção CSRF do OAuth.
+    throw new Error(
+      "Segredo de state do Google OAuth ausente: defina GOOGLE_AUTH_STATE_SECRET ou SESSION_SECRET."
+    );
+  }
+  return secret;
 }
 
 export function createGoogleState(payload: Record<string, unknown>): string {

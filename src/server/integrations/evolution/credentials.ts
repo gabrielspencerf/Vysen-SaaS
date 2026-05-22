@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { evolutionInstances } from "@/db/schema";
 import { getDb } from "@/server/db";
-import { decryptSecret } from "@/server/security/secret-crypto";
+import { tryDecryptStoredSecret } from "@/server/security/secret-storage";
 
 export async function getEvolutionInstanceSecret(
   evolutionInstanceId: string
@@ -13,11 +13,8 @@ export async function getEvolutionInstanceSecret(
     .where(eq(evolutionInstances.id, evolutionInstanceId))
     .limit(1);
 
-  if (!instance?.apiKeyEncrypted) return null;
-  try {
-    return decryptSecret(instance.apiKeyEncrypted);
-  } catch {
-    // Compatibilidade para dados antigos que ainda estejam em plain text.
-    return instance.apiKeyEncrypted;
-  }
+  return tryDecryptStoredSecret(
+    instance?.apiKeyEncrypted ?? null,
+    `evolution_instances.api_key:${evolutionInstanceId}`
+  );
 }

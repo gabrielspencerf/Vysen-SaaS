@@ -4,7 +4,11 @@
  * Valida membership; atualiza current_tenant_id na sessão (não cria nova sessão).
  */
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/server/auth";
+import {
+  requireAuth,
+  buildSetCookieHeader,
+  buildSetCsrfCookieFromSession,
+} from "@/server/auth";
 import { PERMISSION_SLUGS, requirePermission } from "@/server/rbac";
 import { switchTenant } from "@/server/tenancy/switch";
 
@@ -66,11 +70,25 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
+    if (result.error === "session_lost") {
+      return NextResponse.json(
+        { error: "Sessão inválida — entre novamente" },
+        { status: 401 }
+      );
+    }
     return NextResponse.json(
       { error: "Não foi possível trocar o tenant" },
       { status: 400 }
     );
   }
 
-  return NextResponse.json({ ok: true });
+  const response = NextResponse.json({ ok: true });
+  if (result.token && result.maxAge) {
+    response.headers.append(
+      "Set-Cookie",
+      buildSetCookieHeader(result.token, { maxAge: result.maxAge })
+    );
+    response.headers.append("Set-Cookie", buildSetCsrfCookieFromSession());
+  }
+  return response;
 }

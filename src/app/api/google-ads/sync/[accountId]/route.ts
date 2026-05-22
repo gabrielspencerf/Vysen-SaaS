@@ -8,7 +8,7 @@ import { requireAuth } from "@/server/auth";
 import { getCurrentMembership } from "@/server/tenancy/membership";
 import { getGoogleAdsAccountById } from "@/server/integrations/google-ads";
 import { createRedisClient } from "@/server/redis";
-import { enqueue } from "@/workers/queue";
+import { enqueueWithDedup } from "@/workers/queue";
 
 export async function POST(
   _request: NextRequest,
@@ -67,16 +67,19 @@ export async function POST(
   }
 
   const redis = createRedisClient();
+  let dedupResult = { enqueued: false };
   try {
-    await enqueue(redis, {
-      type: "sync_google_ads_account",
-      accountId,
-    });
+    dedupResult = await enqueueWithDedup(
+      redis,
+      { type: "sync_google_ads_account", accountId },
+      { dedupKey: `sync:gads:${accountId}` }
+    );
   } finally {
-    redis.quit();
+    await redis.quit().catch(() => {});
   }
 
   const url = new URL(_request.url);
-  const redirectTo = `${url.origin}/dashboard/google-ads?sync=enqueued`;
+  const status = dedupResult.enqueued ? "enqueued" : "already_in_flight";
+  const redirectTo = `${url.origin}/dashboard/google-ads?sync=${status}`;
   return NextResponse.redirect(redirectTo, { status: 302 });
 }
