@@ -155,6 +155,20 @@
       "when": 1747900800000,
       "tag": "0020_leads_status_default",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1747987200000,
+      "tag": "0021_knowledge_scope_check",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1747987200001,
+      "tag": "0022_vysen_usage_events_correlation",
+      "breakpoints": true
     }
   ]
 }
