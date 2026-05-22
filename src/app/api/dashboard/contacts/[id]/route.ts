@@ -1,14 +1,36 @@
 /**
- * PATCH /api/dashboard/opportunities/[id] — atualiza oportunidade (stage, title, contact_started_at, contracted_model, job_value).
+ * GET /api/dashboard/contacts/[id] — detalhe.
+ * PATCH /api/dashboard/contacts/[id] — atualiza name/email/phone.
+ * DELETE /api/dashboard/contacts/[id] — remove.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireDashboardApiAuth } from "@/server/dashboard/api-auth";
 import { dashboardApiAuthErrorResponse } from "@/server/dashboard/api-route-errors";
 import { PERMISSION_SLUGS } from "@/server/rbac";
 import {
-  updateOpportunityForTenant,
-  deleteOpportunityForTenant,
+  deleteContactForTenant,
+  getContactByIdForTenant,
+  updateContactForTenant,
 } from "@/server/dashboard";
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  let session;
+  try {
+    session = await requireDashboardApiAuth(request, PERMISSION_SLUGS.DASHBOARD_READ);
+  } catch (err) {
+    return dashboardApiAuthErrorResponse(err);
+  }
+  const tenantId = session.session.currentTenantId!;
+  const { id } = await params;
+  const row = await getContactByIdForTenant(tenantId, id);
+  if (!row) {
+    return NextResponse.json({ error: "Contato não encontrado" }, { status: 404 });
+  }
+  return NextResponse.json(row);
+}
 
 export async function PATCH(
   request: NextRequest,
@@ -20,63 +42,33 @@ export async function PATCH(
   } catch (err) {
     return dashboardApiAuthErrorResponse(err);
   }
-
   const tenantId = session.session.currentTenantId!;
-
   const { id } = await params;
   if (!id) {
-    return NextResponse.json(
-      { error: "ID da oportunidade é obrigatório" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "ID obrigatório" }, { status: 400 });
   }
-
   let body: Record<string, unknown>;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Corpo inválido" }, { status: 400 });
   }
-
-  const stage = typeof body.stage === "string" ? body.stage : undefined;
-  const title =
-    body.title === null || body.title === undefined
-      ? undefined
-      : typeof body.title === "string"
-        ? body.title
-        : undefined;
-  const contactStartedAt =
-    body.contactStartedAt === null || body.contactStartedAt === undefined
-      ? undefined
-      : typeof body.contactStartedAt === "string"
-        ? body.contactStartedAt
-        : undefined;
-  const contractedModel =
-    body.contractedModel === null || body.contractedModel === undefined
-      ? undefined
-      : typeof body.contractedModel === "string"
-        ? body.contractedModel
-        : undefined;
-  const jobValue =
-    body.jobValue === null || body.jobValue === undefined
-      ? undefined
-      : typeof body.jobValue === "string"
-        ? body.jobValue
-        : undefined;
-
-  const result = await updateOpportunityForTenant(tenantId, id, {
-    stage,
-    title,
-    contactStartedAt,
-    contractedModel,
-    jobValue,
+  const result = await updateContactForTenant(tenantId, id, {
+    name: typeof body.name === "string" ? body.name : undefined,
+    email: typeof body.email === "string" ? body.email : undefined,
+    phone: typeof body.phone === "string" ? body.phone : undefined,
     actorUserId: session.user.id,
   });
-
   if (!result.ok) {
+    if (result.error === "not_found") {
+      return NextResponse.json(
+        { error: "Contato não encontrado" },
+        { status: 404 }
+      );
+    }
     return NextResponse.json(
-      { error: "Oportunidade não encontrada" },
-      { status: 404 }
+      { error: "E-mail ou telefone já usado por outro contato." },
+      { status: 409 }
     );
   }
   return NextResponse.json({ ok: true });
@@ -97,10 +89,10 @@ export async function DELETE(
   if (!id) {
     return NextResponse.json({ error: "ID obrigatório" }, { status: 400 });
   }
-  const result = await deleteOpportunityForTenant(tenantId, id, session.user.id);
+  const result = await deleteContactForTenant(tenantId, id, session.user.id);
   if (!result.ok) {
     return NextResponse.json(
-      { error: "Oportunidade não encontrada" },
+      { error: "Contato não encontrado" },
       { status: 404 }
     );
   }

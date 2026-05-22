@@ -152,3 +152,45 @@ export async function createMembership(
     return { error: "Erro ao criar membership" };
   }
 }
+
+/**
+ * Troca a role de um membership existente. Identificação pelo ID do
+ * membership (não pelo par userId/tenantId, que muda menos).
+ */
+export async function updateMembershipRole(input: {
+  membershipId: string;
+  roleSlug: string;
+}): Promise<{ ok: true; tenantId: string; userId: string } | { error: string }> {
+  const db = getDb();
+  const [roleRow] = await db
+    .select({ id: roles.id })
+    .from(roles)
+    .where(eq(roles.slug, input.roleSlug))
+    .limit(1);
+  if (!roleRow) return { error: "Role não encontrada" };
+  const [existing] = await db
+    .select({ tenantId: memberships.tenantId, userId: memberships.userId })
+    .from(memberships)
+    .where(eq(memberships.id, input.membershipId))
+    .limit(1);
+  if (!existing) return { error: "Membership não encontrado" };
+  await db
+    .update(memberships)
+    .set({ roleId: roleRow.id })
+    .where(eq(memberships.id, input.membershipId));
+  return { ok: true, tenantId: existing.tenantId, userId: existing.userId };
+}
+
+export async function deleteMembership(
+  membershipId: string
+): Promise<{ ok: true; tenantId: string; userId: string } | { error: string }> {
+  const db = getDb();
+  const [existing] = await db
+    .select({ tenantId: memberships.tenantId, userId: memberships.userId })
+    .from(memberships)
+    .where(eq(memberships.id, membershipId))
+    .limit(1);
+  if (!existing) return { error: "Membership não encontrado" };
+  await db.delete(memberships).where(eq(memberships.id, membershipId));
+  return { ok: true, tenantId: existing.tenantId, userId: existing.userId };
+}

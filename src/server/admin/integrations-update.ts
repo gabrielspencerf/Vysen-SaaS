@@ -4,10 +4,11 @@
  */
 import { and, eq, ne } from "drizzle-orm";
 import { getDb } from "@/server/db";
-import { evolutionInstances, uazapiInstances } from "@/db/schema";
+import { evolutionInstances, typebotBots, uazapiInstances } from "@/db/schema";
 import { encryptSecretForStorage } from "@/server/security/secret-storage";
 import { normalizeUazapiCredential } from "@/lib/uazapi-credentials";
 import { recordTenantActivity } from "@/server/tenancy/tenant-activity";
+import { hashWebhookSecret } from "@/server/integrations/webhook-secret";
 
 function isMissingColumnError(err: unknown, columnName: string): boolean {
   if (!(err instanceof Error)) return false;
@@ -418,6 +419,179 @@ export async function updateUazapiInstanceById(input: {
     },
     metadata: {
       provider: "uazapi",
+      integrationId: updated.id,
+    },
+  });
+  return updated;
+}
+
+// ============================================================================
+// Typebot
+// ============================================================================
+
+export async function getTypebotBotById(
+  id: string
+): Promise<
+  | {
+      id: string;
+      tenantId: string;
+      externalId: string;
+      name: string | null;
+      metricsApiBaseUrl: string | null;
+      hasWebhookSecret: boolean;
+      hasApiToken: boolean;
+    }
+  | IntegrationNotFound
+> {
+  const db = getDb();
+  const [row] = await db
+    .select({
+      id: typebotBots.id,
+      tenantId: typebotBots.tenantId,
+      externalId: typebotBots.externalId,
+      name: typebotBots.name,
+      metricsApiBaseUrl: typebotBots.metricsApiBaseUrl,
+      webhookSecretEncrypted: typebotBots.webhookSecretEncrypted,
+      apiTokenEncrypted: typebotBots.apiTokenEncrypted,
+    })
+    .from(typebotBots)
+    .where(eq(typebotBots.id, id))
+    .limit(1);
+  if (!row) return { error: "not_found" };
+  return {
+    id: row.id,
+    tenantId: row.tenantId,
+    externalId: row.externalId,
+    name: row.name,
+    metricsApiBaseUrl: row.metricsApiBaseUrl,
+    hasWebhookSecret: Boolean(row.webhookSecretEncrypted),
+    hasApiToken: Boolean(row.apiTokenEncrypted),
+  };
+}
+
+export async function updateTypebotBotById(input: {
+  id: string;
+  externalId?: string;
+  name?: string | null;
+  metricsApiBaseUrl?: string | null;
+  /** Se fornecido (mesmo string vazia), substitui. undefined = mantém atual. */
+  webhookSecret?: string | null;
+  /** Idem. */
+  apiToken?: string | null;
+  actorUserId?: string | null;
+}): Promise<
+  | {
+      id: string;
+      tenantId: string;
+      externalId: string;
+      name: string | null;
+    }
+  | IntegrationNotFound
+  | IntegrationDuplicate
+> {
+  const db = getDb();
+  const [current] = await db
+    .select({
+      id: typebotBots.id,
+      tenantId: typebotBots.tenantId,
+      externalId: typebotBots.externalId,
+      name: typebotBots.name,
+    })
+    .from(typebotBots)
+    .where(eq(typebotBots.id, input.id))
+    .limit(1);
+  if (!current) return { error: "not_found" };
+
+  // Verifica duplicidade de external_id no mesmo tenant.
+  if (input.externalId && input.externalId.trim() !== current.externalId) {
+    const [conflict] = await db
+      .select({ id: typebotBots.id })
+      .from(typebotBots)
+      .where(
+        and(
+          eq(typebotBots.tenantId, current.tenantId),
+          eq(typebotBots.externalId, input.externalId.trim()),
+          ne(typebotBots.id, current.id)
+        )
+      )
+      .limit(1);
+    if (conflict) return { error: "duplicate_external_id" };
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (input.externalId !== undefined) updates.externalId = input.externalId.trim();
+  if (input.name !== undefined) updates.name = input.name?.trim() || null;
+  if (input.metricsApiBaseUrl !== undefined) {
+    updates.metricsApiBaseUrl =
+      input.metricsApiBaseUrl?.trim()
+        ? input.metricsApiBaseUrl.trim().replace(/\/$/, "")
+        : null;
+  }
+  if (input.webhookSecret !== undefined) {
+    if (input.webhookSecret && input.webhookSecret.trim()) {
+      updates.webhookSecretHash = hashWebhookSecret(input.webhookSecret.trim());
+      updates.webhookSecretEncrypted = encryptSecretForStorage(
+        input.webhookSecret.trim(),
+        "updateTypebotBot:webhookSecret"
+      );
+    } else {
+      // string vazia explícita = remover
+      updates.webhookSecretHash = null;
+      updates.webhookSecretEncrypted = null;
+    }
+  }
+  if (input.apiToken !== undefined) {
+    if (input.apiToken && input.apiToken.trim()) {
+      updates.apiTokenEncrypted = encryptSecretForStorage(
+        input.apiToken.trim(),
+        "updateTypebotBot:apiToken"
+      );
+    } else {
+      updates.apiTokenEncrypted = null;
+    }
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return {
+      id: current.id,
+      tenantId: current.tenantId,
+      externalId: current.externalId,
+      name: current.name,
+    };
+  }
+
+  const [updated] = await db
+    .update(typebotBots)
+    .set(updates as Partial<typeof typebotBots.$inferInsert>)
+    .where(eq(typebotBots.id, current.id))
+    .returning({
+      id: typebotBots.id,
+      tenantId: typebotBots.tenantId,
+      externalId: typebotBots.externalId,
+      name: typebotBots.name,
+    });
+  if (!updated) return { error: "not_found" };
+
+  await recordTenantActivity({
+    tenantId: updated.tenantId,
+    actorUserId: input.actorUserId ?? null,
+    scope: "integrations",
+    action: "update",
+    notificationType: "integration_updated",
+    title: "Integração Typebot atualizada",
+    message: `Bot ${updated.name?.trim() || updated.externalId} foi atualizado.`,
+    resourceType: "integration_typebot",
+    resourceId: updated.id,
+    oldValues: {
+      externalId: current.externalId,
+      name: current.name,
+    },
+    newValues: {
+      externalId: updated.externalId,
+      name: updated.name,
+    },
+    metadata: {
+      provider: "typebot",
       integrationId: updated.id,
     },
   });

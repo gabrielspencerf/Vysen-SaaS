@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/server/auth";
+import {
+  requireAuth,
+  hashPassword,
+  verifyPassword,
+  invalidateAllSessionsForUser,
+  createSession,
+  buildSetCookieHeader,
+  buildSetCsrfCookieFromSession,
+  authConfig,
+} from "@/server/auth";
 import { getDb } from "@/server/db";
 import { users, userProfiles } from "@/db/schema";
 import { checkRateLimit } from "@/server/security/rate-limit";
+import { runWithRlsContext } from "@/server/db/access-context";
 
 const MAX_LENGTH = { name: 255, phone: 64, jobTitle: 255, companyName: 255, website: 512, companyPhone: 64, address: 512, timezone: 64, avatarUrl: 512 };
 
@@ -69,11 +79,62 @@ export async function PATCH(request: NextRequest) {
     companyAddress?: string;
     timezone?: string;
     avatarUrl?: string;
+    currentPassword?: string;
+    newPassword?: string;
   };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Corpo inválido" }, { status: 400 });
+  }
+
+  // Mudança de senha: requer currentPassword + newPassword. Verifica a atual
+  // antes de atualizar e invalida outras sessões (mantém a sessão atual via
+  // nova sessão emitida no fim). Sem isso, basta XSS pra rotacionar senha.
+  let rotateSessionAfter = false;
+  if (body.newPassword !== undefined || body.currentPassword !== undefined) {
+    const newPassword = (body.newPassword ?? "").trim();
+    const currentPassword = (body.currentPassword ?? "").trim();
+    if (!currentPassword || !newPassword) {
+      return NextResponse.json(
+        { error: "Senha atual e nova senha são obrigatórias para alterar senha." },
+        { status: 400 }
+      );
+    }
+    if (newPassword.length < 8) {
+      return NextResponse.json(
+        { error: "Nova senha deve ter pelo menos 8 caracteres." },
+        { status: 400 }
+      );
+    }
+    const dbAuth = getDb();
+    const [userRow] = await dbAuth
+      .select({ passwordHash: users.passwordHash })
+      .from(users)
+      .where(eq(users.id, session.user.id))
+      .limit(1);
+    if (!userRow) {
+      return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
+    }
+    const ok = await verifyPassword(currentPassword, userRow.passwordHash);
+    if (!ok) {
+      return NextResponse.json(
+        { error: "Senha atual incorreta." },
+        { status: 401 }
+      );
+    }
+    const newHash = await hashPassword(newPassword);
+    await runWithRlsContext({ tenantId: null, bypassRls: true }, async () => {
+      const db = getDb();
+      await db
+        .update(users)
+        .set({ passwordHash: newHash, updatedAt: new Date() })
+        .where(eq(users.id, session.user.id));
+      // Invalida TODAS as sessões; emitimos uma nova no response pra manter
+      // o caller logado neste device.
+      await invalidateAllSessionsForUser(session.user.id);
+    });
+    rotateSessionAfter = true;
   }
 
   const name = body.name !== undefined ? (body.name?.trim() || null) : undefined;
@@ -123,6 +184,28 @@ export async function PATCH(request: NextRequest) {
         ...setProfile,
       });
     }
+  }
+
+  // Se a senha foi rotacionada, emitir nova sessão (caller mantém login) e
+  // sobrescrever cookies; outras sessões já foram invalidadas.
+  if (rotateSessionAfter) {
+    const fresh = await createSession({
+      userId: session.user.id,
+      currentTenantId: session.session.currentTenantId,
+      ipAddress:
+        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+        request.headers.get("x-real-ip") ??
+        null,
+      userAgent: request.headers.get("user-agent") ?? null,
+      ttlSeconds: authConfig.defaultSessionTtlSeconds,
+    });
+    const response = NextResponse.json({ ok: true, passwordChanged: true });
+    response.headers.append(
+      "Set-Cookie",
+      buildSetCookieHeader(fresh.token, { maxAge: fresh.maxAge })
+    );
+    response.headers.append("Set-Cookie", buildSetCsrfCookieFromSession());
+    return response;
   }
 
   return NextResponse.json({ ok: true }, { status: 200 });

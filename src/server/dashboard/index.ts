@@ -15,8 +15,19 @@ export type {
 } from "./analytics";
 export { listLeadsForTenant } from "./leads";
 export type { LeadRow, ListLeadsOptions } from "./leads";
-export { listContactsForTenant } from "./contacts";
-export type { ContactRow, ListContactsOptions } from "./contacts";
+export {
+  listContactsForTenant,
+  createContactForTenant,
+  updateContactForTenant,
+  deleteContactForTenant,
+  getContactByIdForTenant,
+} from "./contacts";
+export type {
+  ContactRow,
+  ListContactsOptions,
+  CreateContactInput,
+  UpdateContactInput,
+} from "./contacts";
 export { importLeadsFromCsv } from "./leads-import";
 export type { CsvLeadRow, ImportLeadResult } from "./leads-import";
 export { importContactsFromCsv } from "./contacts-import";
@@ -28,8 +39,12 @@ export type {
   LeadDetailEvent,
   LeadDetailConversation,
 } from "./lead-detail";
-export { updateLeadForTenant } from "./lead-update";
-export type { UpdateLeadInput } from "./lead-update";
+export {
+  updateLeadForTenant,
+  createLeadForTenant,
+  deleteLeadForTenant,
+} from "./lead-update";
+export type { UpdateLeadInput, CreateLeadInput } from "./lead-update";
 export { listConversationsForTenant } from "./conversations";
 export type {
   ConversationRow,
@@ -103,6 +118,8 @@ export {
   listOpportunitiesForTenant,
   getOpportunityForTenant,
   updateOpportunityForTenant,
+  createOpportunityForTenant,
+  deleteOpportunityForTenant,
 } from "./opportunities";
 export type {
   OpportunityRow,

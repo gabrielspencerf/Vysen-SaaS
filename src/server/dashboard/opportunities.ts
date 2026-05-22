@@ -179,3 +179,87 @@ export async function updateOpportunityForTenant(
   });
   return { ok: true };
 }
+
+export interface CreateOpportunityInput {
+  stage?: string;
+  title?: string | null;
+  contactStartedAt?: string | null;
+  contractedModel?: string | null;
+  jobValue?: string | null;
+  leadId?: string | null;
+  contactId?: string | null;
+  conversationId?: string | null;
+  actorUserId?: string | null;
+}
+
+export async function createOpportunityForTenant(
+  tenantId: string,
+  input: CreateOpportunityInput
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const db = getDb();
+  const [inserted] = await db
+    .insert(opportunities)
+    .values({
+      tenantId,
+      stage: (input.stage ?? "open") as never,
+      title: input.title ?? null,
+      contactStartedAt: input.contactStartedAt
+        ? new Date(input.contactStartedAt)
+        : null,
+      contractedModel: input.contractedModel ?? null,
+      jobValue: input.jobValue ?? null,
+      leadId: input.leadId ?? null,
+      contactId: input.contactId ?? null,
+      conversationId: input.conversationId ?? null,
+    })
+    .returning({ id: opportunities.id });
+  if (!inserted) return { ok: false, error: "Falha ao criar oportunidade" };
+  await writeAuditLog({
+    tenantId,
+    userId: input.actorUserId ?? null,
+    action: "create",
+    resourceType: "opportunity",
+    resourceId: inserted.id,
+    newValues: {
+      stage: input.stage ?? "open",
+      title: input.title ?? null,
+      leadId: input.leadId ?? null,
+    },
+  });
+  return { ok: true, id: inserted.id };
+}
+
+export async function deleteOpportunityForTenant(
+  tenantId: string,
+  opportunityId: string,
+  actorUserId: string | null
+): Promise<{ ok: true } | { ok: false; error: "not_found" }> {
+  const db = getDb();
+  const [existing] = await db
+    .select({ id: opportunities.id })
+    .from(opportunities)
+    .where(
+      and(
+        eq(opportunities.tenantId, tenantId),
+        eq(opportunities.id, opportunityId)
+      )
+    )
+    .limit(1);
+  if (!existing) return { ok: false, error: "not_found" };
+  await db
+    .delete(opportunities)
+    .where(
+      and(
+        eq(opportunities.tenantId, tenantId),
+        eq(opportunities.id, opportunityId)
+      )
+    );
+  await writeAuditLog({
+    tenantId,
+    userId: actorUserId,
+    action: "delete",
+    resourceType: "opportunity",
+    resourceId: opportunityId,
+  });
+  return { ok: true };
+}
