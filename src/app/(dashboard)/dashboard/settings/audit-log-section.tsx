@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui";
+import { formatDateTime as formatDate } from "@/lib/i18n/date";
 
 interface AuditLogItem {
   id: string;
@@ -16,13 +17,6 @@ interface AuditApiResponse {
   enabled: boolean;
   scopes: string[];
   logs: AuditLogItem[];
-}
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
 }
 
 export function AuditLogSection() {

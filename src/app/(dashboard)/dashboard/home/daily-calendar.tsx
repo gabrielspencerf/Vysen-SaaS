@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { formatCustom } from "@/lib/i18n/date";
 
 type DayData = {
   date: string;
@@ -15,17 +16,15 @@ function parseDateKey(dateKey: string): Date {
 }
 
 function formatDateLabel(date: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(
-    parseDateKey(date)
-  );
+  return formatCustom(parseDateKey(date), { day: "2-digit", month: "2-digit" });
 }
 
 function formatLongDateLabel(date: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
+  return formatCustom(parseDateKey(date), {
     weekday: "long",
     day: "2-digit",
     month: "long",
-  }).format(parseDateKey(date));
+  });
 }
 
 function intensityClass(leads: number): string {
@@ -82,9 +81,10 @@ export function DailyCalendar({ data }: { data: DayData[] }) {
 
   const monthLabel = useMemo(() => {
     if (data.length === 0) return "";
-    return new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(
-      parseDateKey(data[0].date)
-    );
+    return formatCustom(parseDateKey(data[0].date), {
+      month: "long",
+      year: "numeric",
+    });
   }, [data]);
 
   const todayKey = useMemo(() => {

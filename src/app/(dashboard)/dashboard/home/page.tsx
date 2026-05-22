@@ -9,19 +9,13 @@ import { DashboardPageHeader } from "@/components/layout";
 import { LeadsChart, AdsSpendChart } from "@/components/dashboard-charts-lazy";
 import { DailyCalendar } from "./daily-calendar";
 import { agentDebugLog } from "@/server/debug/agent-debug-log";
+import { formatDateTime as formatDate } from "@/lib/i18n/date";
 
 const PERIOD_OPTIONS = [
   { value: "7", label: "Últimos 7 dias" },
   { value: "30", label: "Últimos 30 dias" },
   { value: "90", label: "Últimos 90 dias" },
 ] as const;
-
-function formatDate(d: Date): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(d));
-}
 
 function formatNumber(n: number): string {
   return new Intl.NumberFormat("pt-BR").format(n);

@@ -19,18 +19,14 @@ import {
 import { ConversationScrollContainer } from "@/components/dashboard/conversation-scroll-container";
 import { Badge } from "@/components/ui";
 import { Card, CardContent } from "@/components/ui";
+import { formatCustom } from "@/lib/i18n/date";
 
 function formatTime(d: Date): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(d));
+  return formatCustom(d, { hour: "2-digit", minute: "2-digit" });
 }
 
 function formatDateFull(d: Date): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "full",
-  }).format(new Date(d));
+  return formatCustom(d, { dateStyle: "full" });
 }
 
 function statusLabel(status: string): string {

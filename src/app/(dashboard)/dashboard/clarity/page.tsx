@@ -8,13 +8,11 @@ import { PageSection } from "@/components/layout";
 import { env } from "@/config/env";
 import { ClarityConnectionActions, NewClarityConnectionForm } from "./clarity-client";
 import { ProviderBrandIcon } from "@/components/provider-brand-icon";
+import { formatDateTime } from "@/lib/i18n/date";
 
 function formatDate(d: Date | null): string {
   if (!d) return "—";
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(d));
+  return formatDateTime(d);
 }
 
 export default async function DashboardClarityPage({

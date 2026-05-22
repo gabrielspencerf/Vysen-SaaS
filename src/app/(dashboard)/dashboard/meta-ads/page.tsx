@@ -14,13 +14,11 @@ import { env } from "@/config/env";
 import { getCsrfCookieName } from "@/server/security/csrf";
 import { MetaCapiPanel, MetaPixelForm } from "./meta-ads-actions-client";
 import { ProviderBrandIcon } from "@/components/provider-brand-icon";
+import { formatDateTime } from "@/lib/i18n/date";
 
 function formatDate(d: Date | null): string {
   if (!d) return "—";
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(d));
+  return formatDateTime(d);
 }
 
 function formatMoney(value: number, currency: string | null): string {

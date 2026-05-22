@@ -50,6 +50,15 @@ export function formatDateMedium(input: DateInput): string {
   }).format(toDate(input));
 }
 
+/**
+ * Escape-hatch: aceita Intl.DateTimeFormatOptions custom mas força o locale
+ * central. Use quando os helpers padrão (formatDate/Time/Medium/etc.) não
+ * cobrem o caso (ex.: "22/05", "quinta-feira, 22 de maio").
+ */
+export function formatCustom(input: DateInput, options: Intl.DateTimeFormatOptions): string {
+  return new Intl.DateTimeFormat(DEFAULT_LOCALE, options).format(toDate(input));
+}
+
 /** Relativo curto: "há 3 min", "há 2 h", "ontem". Para timestamps no passado. */
 export function formatRelative(input: DateInput, now: Date = new Date()): string {
   const date = toDate(input);

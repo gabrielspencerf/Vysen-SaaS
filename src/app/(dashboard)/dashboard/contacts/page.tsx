@@ -6,15 +6,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Button } from "@/components/ui";
 import { ImportExportActions } from "@/components/dashboard/import-export-actions";
 import { UserCircle } from "lucide-react";
+import { formatDateTime as formatDate } from "@/lib/i18n/date";
 
 const CONTACTS_LIMIT = 200;
-
-function formatDate(d: Date): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(d));
-}
 
 export default async function DashboardContactsPage({
   searchParams,

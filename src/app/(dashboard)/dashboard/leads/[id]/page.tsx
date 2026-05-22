@@ -7,13 +7,7 @@ import {
 import { PageSection } from "@/components/layout";
 import { ListTableHeader, ListRowCard } from "@/components/layout";
 import { LeadAiSuggestionCard } from "@/components/dashboard/lead-ai-suggestion-card";
-
-function formatDate(d: Date): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(d));
-}
+import { formatDateTime as formatDate } from "@/lib/i18n/date";
 
 export default async function DashboardLeadDetailPage({
   params,

@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDate } from "@/lib/i18n/date";
+
 type ResultWithScore = {
   id: string;
   url: string;
@@ -8,12 +10,6 @@ type ResultWithScore = {
   fetchedAt: Date | string;
   score: number | null;
 };
-
-function formatDate(d: Date): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-  }).format(new Date(d));
-}
 
 export function PageSpeedResults({
   results,

@@ -7,15 +7,13 @@ import { PageSection, ListTableHeader, ListRowCard } from "@/components/layout";
 import { DashboardPageHeader } from "@/components/layout";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TrendingUp } from "lucide-react";
+import { formatDateTime } from "@/lib/i18n/date";
 
 const OPPORTUNITIES_LIMIT = 200;
 
 function formatDate(d: Date | null): string {
   if (!d) return "—";
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(d));
+  return formatDateTime(d);
 }
 
 function formatCurrency(value: string | null): string {

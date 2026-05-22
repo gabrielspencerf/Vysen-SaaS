@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { formatCustom } from "@/lib/i18n/date";
 
 type LeadRow = {
   id: string;
@@ -29,7 +30,7 @@ function formatRelativeDate(value: Date): string {
   if (days <= 0) return "hoje";
   if (days === 1) return "ontem";
   if (days < 7) return `${days} dias`;
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(date);
+  return formatCustom(date, { day: "2-digit", month: "2-digit" });
 }
 
 function sourceLabel(sourceProvider: string | null): string {

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell, CheckCheck } from "lucide-react";
+import { formatDateTime as formatDate } from "@/lib/i18n/date";
 
 interface NotificationItem {
   id: string;
@@ -11,13 +12,6 @@ interface NotificationItem {
   message: string;
   isRead: boolean;
   createdAt: string;
-}
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
 }
 
 interface DashboardNotificationBellProps {
@@ -49,10 +43,20 @@ export function DashboardNotificationBell({
       const res = await fetch("/api/dashboard/notifications", { method: "GET" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error ?? "Erro ao carregar notificações.");
+        const message =
+          typeof data.error === "string"
+            ? data.error
+            : typeof data.error?.message === "string"
+              ? data.error.message
+              : "Erro ao carregar notificações.";
+        setError(message);
         return;
       }
-      setItems((data.notifications as NotificationItem[]) ?? []);
+      const notifications =
+        data.ok === true && data.data && typeof data.data === "object"
+          ? (data.data as { notifications?: NotificationItem[] }).notifications
+          : (data.notifications as NotificationItem[] | undefined);
+      setItems(notifications ?? []);
     } catch {
       setError("Falha de conexão ao carregar notificações.");
     } finally {

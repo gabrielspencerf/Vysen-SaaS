@@ -4,13 +4,7 @@ import { ListRowCard, ListTableHeader, PageSection } from "@/components/layout";
 import { DashboardPageHeader } from "@/components/layout";
 import { getDashboardTenantContext, listComplaintsForTenant } from "@/server/dashboard";
 import { NewSupportTicketForm } from "./new-support-ticket-form";
-
-function formatDate(d: Date): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(d));
-}
+import { formatDateTime as formatDate } from "@/lib/i18n/date";
 
 const statusLabel: Record<string, string> = {
   open: "Aberto",

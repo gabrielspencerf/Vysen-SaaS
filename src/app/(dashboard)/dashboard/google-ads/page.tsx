@@ -10,6 +10,7 @@ import {
 } from "@/server/dashboard";
 import { PageSection, ListTableHeader, ListRowCard } from "@/components/layout";
 import { DashboardPageHeader } from "@/components/layout";
+import { formatDateTime } from "@/lib/i18n/date";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui";
 import { BarChart3 } from "lucide-react";
@@ -26,10 +27,7 @@ const PAGE_SIZE = 50;
 
 function formatDate(d: Date | null): string {
   if (!d) return "—";
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(d));
+  return formatDateTime(d);
 }
 
 function formatCost(value: number, currencyCode: string | null): string {
