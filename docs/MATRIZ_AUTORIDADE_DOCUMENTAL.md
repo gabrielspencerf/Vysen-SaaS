@@ -40,7 +40,21 @@ Versao inicial para F1 (canonizacao documental). Este arquivo define onde cada t
     - `docs/EVENTOS_OBSERVABILIDADE_MINIMA.md`
     - `docs/FRONTEND_DATA_LAYER_INCREMENTAL.md`
     - `docs/AI_BUSCA_HIPOTESES_METRICAS.md`
+    - `docs/SUPERADMIN_AREA.md` (3-way diff entre os grupos de rotas admin)
+    - `docs/specs/adr-api-envelope-transition.md` (estado de migração para apiOk/apiError)
   - Revisão de coerência: `docs/REVISAO_COERENCIA_DOCUMENTACAO_2026-04-26.md`
+
+- **Channels (mensageria e ads)**
+  - Objetivo: guia operacional por canal (cadastro, webhook, processador, troubleshooting).
+  - Arquivos canonicos:
+    - `docs/BASE2_ETAPA2_EVOLUTION.md`
+    - `docs/BASE2_ETAPA2_TYPEBOT.md`
+    - `docs/UAZAPI_PARIDADE_EVOLUTION.md`
+    - `docs/BASE2_CHATWOOT.md`
+    - `docs/BASE2_WHATSAPP_CLOUD.md`
+    - `docs/BASE2_META_ADS.md`
+    - `docs/BASE2_CLARITY.md`
+    - `docs/BASE2_GOOGLE_ADS_*.md`
 
 - **History**
   - Objetivo: historico de mudancas, revisoes e incidentes.
@@ -49,7 +63,7 @@ Versao inicial para F1 (canonizacao documental). Este arquivo define onde cada t
     - `docs/log/REGISTRO.md`
     - `docs/RELEASE_v0.2.0.md`
     - `docs/RELEASE_v0.3.0.md`
-    - `docs/REVISAO_COMPLETA_APP_2026-03.md`
+  - Arquivado em `docs/log/`: `REVISAO_GERAL_2026-03.md`, `REVISAO_COMPLETA_APP_2026-03.md`, `REVISAO_PAGINAS_E_TABELAS.md`, planos concluídos.
 
 ## 3. Ordem de consulta recomendada
 
