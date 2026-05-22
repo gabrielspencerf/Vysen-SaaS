@@ -194,6 +194,13 @@ export async function askVysenCopilot(input: {
     threadContexts?: string[];
     previousSummaries?: string[];
   };
+  /**
+   * AbortSignal externo (ex.: request.signal do Next.js). Quando o cliente
+   * desconecta, propagamos para o controller interno e cancelamos as chamadas
+   * OpenAI em andamento — evita gerar tokens por uma resposta que ninguém
+   * vai ler.
+   */
+  signal?: AbortSignal;
 }) {
   const question = input.question.trim();
   if (!question) {
@@ -424,6 +431,12 @@ export async function askVysenCopilot(input: {
     const controller = new AbortController();
     const timeoutMs = idx === 0 && requestedMode === "thinking" ? thinkingTimeoutMs : 20000;
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    // Cliente desconectou → cancela a chamada OpenAI em curso.
+    const onExternalAbort = () => controller.abort();
+    if (input.signal) {
+      if (input.signal.aborted) controller.abort();
+      else input.signal.addEventListener("abort", onExternalAbort, { once: true });
+    }
     try {
       const response = await fetch(OPENAI_CHAT_URL, {
         method: "POST",
@@ -471,6 +484,9 @@ export async function askVysenCopilot(input: {
       attemptErrors.push(message);
     } finally {
       clearTimeout(timeout);
+      if (input.signal) {
+        input.signal.removeEventListener("abort", onExternalAbort);
+      }
     }
   }
 

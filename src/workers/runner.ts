@@ -70,6 +70,7 @@ import { runWithRlsContext } from "@/server/db/access-context";
 import type { DbAccessContextInput } from "@/server/db/access-context";
 import { assertProductionRuntimeWebhookSecrets } from "@/server/security/startup-guards";
 import { cleanupWebhookEvents } from "@/server/privacy/cleanup-webhook-events";
+import { cleanupVysenUsageEvents } from "@/server/vysen/usage";
 import { emitDomainEvent } from "@/server/observability/domain-events";
 import type {
   JobPayload,
@@ -658,6 +659,24 @@ setTimeout(() => {
   });
 }, 120_000);
 
+const vysenUsageRetentionInterval = setInterval(() => {
+  cleanupVysenUsageEvents()
+    .then((r) => {
+      if (r.removed > 0) {
+        console.log("[vysen-usage-retention] eventos removidos", r.removed);
+      }
+    })
+    .catch((err) => {
+      console.error("[vysen-usage-retention] failed", err);
+    });
+}, 24 * 60 * 60 * 1000);
+
+setTimeout(() => {
+  cleanupVysenUsageEvents().catch((err) => {
+    console.error("[vysen-usage-retention] initial run failed", err);
+  });
+}, 180_000);
+
 const delayedSchedulerInterval = setInterval(() => {
   tickDelayedScheduler().catch((err) => console.error("[delayed-scheduler] failed", err));
 }, DELAYED_SCHEDULER_INTERVAL_MS);
@@ -697,6 +716,7 @@ async function shutdown(signal: string): Promise<void> {
   clearInterval(heartbeatInterval);
   clearInterval(authCleanupInterval);
   clearInterval(webhookRetentionInterval);
+  clearInterval(vysenUsageRetentionInterval);
   clearInterval(delayedSchedulerInterval);
   clearInterval(reaperInterval);
 

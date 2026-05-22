@@ -1,12 +1,68 @@
+import { createHash } from "crypto";
 import { sql } from "drizzle-orm";
 import { getDb } from "@/server/db";
 import { getGlobalOpenAIAgentApiKeyOnly } from "@/server/config/openai-agent";
 import { writeAuditLog } from "@/server/audit/log";
+import { getSharedRedis } from "@/server/redis";
 
 const OPENAI_EMBEDDINGS_URL = "https://api.openai.com/v1/embeddings";
 const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small";
 const MAX_CHUNK_CHARS = 1400;
 const CHUNK_OVERLAP_CHARS = 180;
+const EMBEDDING_CACHE_TTL_SEC = 60 * 60; // 1h
+
+function embeddingCacheKey(model: string, text: string): string {
+  const hash = createHash("sha256").update(text, "utf8").digest("hex").slice(0, 32);
+  return `vysen:embed:${model}:${hash}`;
+}
+
+/**
+ * Cache de embedding por (model, query normalizada). Perguntas idênticas
+ * em janela de 1h não pagam o custo OpenAI duas vezes. Cache miss → gera
+ * embedding normalmente e armazena.
+ *
+ * Se Redis estiver indisponível, fallback silencioso para chamada direta —
+ * embedding é gerado, apenas sem cache.
+ */
+async function getCachedEmbedding(input: { apiKey: string; text: string; model?: string }) {
+  const model = input.model ?? DEFAULT_EMBEDDING_MODEL;
+  const key = embeddingCacheKey(model, input.text);
+
+  try {
+    const redis = getSharedRedis();
+    const cached = await redis.get(key);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as { embedding: number[]; model: string };
+        if (Array.isArray(parsed.embedding) && parsed.embedding.length > 0) {
+          return { embedding: parsed.embedding, model: parsed.model };
+        }
+      } catch {
+        // cache corrompido — segue e gera novo embedding
+      }
+    }
+  } catch (err) {
+    console.warn(
+      "[vysen-embed] Redis indisponível para cache de embedding; gerando direto",
+      err instanceof Error ? err.message : String(err)
+    );
+  }
+
+  const fresh = await createEmbedding({ apiKey: input.apiKey, text: input.text, model });
+
+  try {
+    const redis = getSharedRedis();
+    await redis.set(
+      key,
+      JSON.stringify({ embedding: fresh.embedding, model: fresh.model }),
+      "EX",
+      EMBEDDING_CACHE_TTL_SEC
+    );
+  } catch {
+    // cache falhou — embedding gerado mesmo assim, sem cache
+  }
+  return fresh;
+}
 
 export type KnowledgeScope = "global" | "tenant";
 
@@ -182,7 +238,8 @@ export async function searchKnowledge(input: KnowledgeSearchInput): Promise<Know
   }
   const limit = Math.max(1, Math.min(12, Math.floor(input.limit ?? 6)));
 
-  const { embedding } = await createEmbedding({
+  // Usa cache: query idêntica em 1h não regenera embedding.
+  const { embedding } = await getCachedEmbedding({
     apiKey,
     text: query,
   });

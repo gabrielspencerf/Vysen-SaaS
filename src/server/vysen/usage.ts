@@ -192,3 +192,40 @@ export async function getVysenAdminUsageMetrics(): Promise<VysenAdminUsageMetric
   }
 }
 
+/**
+ * Apaga eventos vysen_usage_events mais antigos que `retentionDays` (default
+ * 90 dias, configurável via env VYSEN_USAGE_RETENTION_DAYS).
+ *
+ * Por que existe: a tabela cresce sem limite — cada chat do copilot grava
+ * 1-3 linhas, fácil chegar a milhões/ano em tenant ativo. Sem retention,
+ * índices ficam pesados e dashboards de "últimas N horas" começam a varrer
+ * mais do que precisam. Particionamento por mês é o passo seguinte; por
+ * enquanto, retention simples cobre o caso comum.
+ *
+ * Retorna o número de linhas removidas. Falha de query não derruba o caller —
+ * loga e retorna 0.
+ */
+export async function cleanupVysenUsageEvents(): Promise<{ removed: number }> {
+  const days = Number(process.env.VYSEN_USAGE_RETENTION_DAYS ?? "90");
+  const retentionDays = Number.isFinite(days) && days >= 1 ? Math.floor(days) : 90;
+  try {
+    const db = getDb();
+    const result = (await db.execute<{ count: number }>(sql`
+      WITH deleted AS (
+        DELETE FROM "vysen_usage_events"
+        WHERE "created_at" < (now() - (${retentionDays} || ' days')::interval)
+        RETURNING 1
+      )
+      SELECT COUNT(*)::int AS count FROM deleted
+    `)) as unknown as Array<{ count: number }>;
+    const removed = Number(result[0]?.count ?? 0);
+    return { removed };
+  } catch (err) {
+    console.warn(
+      "[vysen-usage-retention] cleanup falhou",
+      err instanceof Error ? err.message : String(err)
+    );
+    return { removed: 0 };
+  }
+}
+

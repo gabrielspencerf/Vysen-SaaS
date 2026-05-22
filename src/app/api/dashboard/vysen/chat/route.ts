@@ -136,6 +136,8 @@ export async function POST(request: NextRequest) {
         threadContexts: cleanThreadContexts,
         previousSummaries: cleanPreviousSummaries,
       },
+      // Cliente desconectou (fechou aba, navegou) → cancela OpenAI em curso.
+      signal: request.signal,
     });
     emitDomainEvent({
       name: "vysen.chat.completed",
