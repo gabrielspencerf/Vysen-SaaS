@@ -15,10 +15,11 @@ import { sanitizeInternalRedirect } from "@/lib/security/redirect";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const from = sanitizeInternalRedirect(searchParams.get("from"), "/dashboard", [
-    "/dashboard",
-    "/admin",
-  ]);
+  // Allowlist do `?from=` para o login do usuário comum: SÓ rotas do dashboard.
+  // /admin / /superadmin são área de admin global — esses fluxos usam
+  // /admin-login e seu próprio allowlist (ver admin-login/page.tsx).
+  const fromRaw = searchParams.get("from");
+  const from = sanitizeInternalRedirect(fromRaw, "/dashboard", ["/dashboard"]);
   const oauthError = searchParams.get("error");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -55,7 +56,12 @@ function LoginForm() {
         setError(data.error ?? "Falha no login. Tente novamente.");
         return;
       }
-      router.push(from);
+      // Super_admin que entrou por /login (em vez de /admin-login) e não
+      // pediu `?from=` específico vai direto pro hub /superadmin. Sem isso,
+      // cairia em /dashboard sem link visível pra área admin.
+      const target =
+        data.isSuperAdmin && !fromRaw ? "/superadmin" : from;
+      router.push(target);
       router.refresh();
     } catch {
       setError("Erro de conexão. Tente novamente.");

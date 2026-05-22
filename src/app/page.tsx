@@ -91,7 +91,7 @@ export default function HomePage() {
                 size="lg"
                 className="w-full sm:w-auto text-[15px] font-bold px-6 h-12 gap-2 shadow-[0_4px_20px_-5px_rgba(var(--color-brand-neon),0.5)] border border-brand-neon rounded-lg tracking-tight"
               >
-                Área do Cliente
+                Entrar
                 <ExternalLink className="h-4 w-4" />
               </Button>
             </Link>

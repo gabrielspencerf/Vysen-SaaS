@@ -2,7 +2,9 @@
 
 /**
  * Página de acesso do administrador: login apenas para super_admin.
- * Após login, redireciona para /admin só se o usuário for super_admin.
+ * Após login, redireciona para /superadmin (hub técnico) só se o usuário
+ * for super_admin global. Não confundir com /admin (que é "Admin da empresa"
+ * — visão de carteira, escopo company-admin).
  */
 
 import { useEffect, useState } from "react";
@@ -52,7 +54,9 @@ export default function AdminLoginPage() {
         return;
       }
       if (data.isSuperAdmin) {
-        router.push("/admin");
+        // Super_admin entra pelo hub técnico consolidado em /superadmin
+        // (NÃO /admin, que é o "Admin da empresa" — visão de carteira).
+        router.push("/superadmin");
         router.refresh();
       } else {
         setError("Acesso restrito a administradores. Use credenciais de super admin.");
