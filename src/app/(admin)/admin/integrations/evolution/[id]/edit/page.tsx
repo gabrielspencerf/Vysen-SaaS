@@ -28,27 +28,38 @@ export default function EditEvolutionInstancePage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    if (!id) return;
+    const controller = new AbortController();
     async function load() {
       setLoading(true);
       setError(null);
-      const res = await fetch(`/api/admin/integrations/evolution/${id}`, { method: "GET" });
-      const data = (await res.json().catch(() => ({}))) as Partial<EvolutionInstanceResponse> & {
-        error?: string;
-      };
-      if (!res.ok) {
-        setError(data.error ?? "Erro ao carregar instância");
+      try {
+        const res = await fetch(`/api/admin/integrations/evolution/${id}`, {
+          method: "GET",
+          signal: controller.signal,
+        });
+        const data = (await res.json().catch(() => ({}))) as Partial<EvolutionInstanceResponse> & {
+          error?: string;
+        };
+        if (!res.ok) {
+          setError(data.error ?? "Erro ao carregar instância");
+          setLoading(false);
+          return;
+        }
+        setExternalId(data.externalId ?? "");
+        setBaseUrl(data.baseUrl ?? "");
+        setInstanceName(data.instanceName ?? "");
         setLoading(false);
-        return;
+      } catch (err) {
+        // Race ao trocar id: AbortError é benigno; outros viram erro visível.
+        if ((err as { name?: string })?.name !== "AbortError") {
+          setError("Erro de conexão");
+          setLoading(false);
+        }
       }
-      setExternalId(data.externalId ?? "");
-      setBaseUrl(data.baseUrl ?? "");
-      setInstanceName(data.instanceName ?? "");
-      setLoading(false);
     }
-
-    if (id) {
-      load();
-    }
+    load();
+    return () => controller.abort();
   }, [id]);
 
   async function handleSubmit(event: React.FormEvent) {
@@ -71,7 +82,7 @@ export default function EditEvolutionInstancePage() {
         setError(data.error ?? "Erro ao atualizar instância");
         return;
       }
-      router.push("/admin/integrations");
+      router.push("/superadmin/integrations");
       router.refresh();
     } catch {
       setError("Erro de conexão");
@@ -83,7 +94,7 @@ export default function EditEvolutionInstancePage() {
   return (
     <div className="p-6">
       <div className="mb-4">
-        <Link href="/admin/integrations" className="text-sm text-brand-neon hover:opacity-90">
+        <Link href="/superadmin/integrations" className="text-sm text-brand-neon hover:opacity-90">
           ← Voltar às integrações
         </Link>
       </div>
@@ -156,6 +167,7 @@ export default function EditEvolutionInstancePage() {
               <Input
                 id="api_key"
                 type="password"
+                autoComplete="new-password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder="Deixe em branco para manter a API key atual"
@@ -166,7 +178,7 @@ export default function EditEvolutionInstancePage() {
               <Button type="submit" disabled={submitting}>
                 {submitting ? "Salvando…" : "Salvar alterações"}
               </Button>
-              <Link href="/admin/integrations">
+              <Link href="/superadmin/integrations">
                 <Button type="button" variant="secondary">
                   Cancelar
                 </Button>

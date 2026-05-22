@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageSection } from "@/components/layout";
 import { Button } from "@/components/ui";
 
@@ -28,26 +28,43 @@ export default function DashboardNotificationsPage() {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [markingAll, setMarkingAll] = useState(false);
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch("/api/dashboard/notifications", { method: "GET" });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          setError(data.error ?? "Erro ao carregar notificações.");
-          return;
-        }
-        setItems((data.notifications as NotificationItem[]) ?? []);
-      } catch {
-        setError("Falha de conexão ao carregar notificações.");
-      } finally {
-        setLoading(false);
+  const load = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/dashboard/notifications", {
+        method: "GET",
+        signal,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const message =
+          typeof data.error === "string"
+            ? data.error
+            : typeof data.error?.message === "string"
+              ? data.error.message
+              : "Erro ao carregar notificações.";
+        setError(message);
+        return;
       }
+      const notifications =
+        data.ok === true && data.data && typeof data.data === "object"
+          ? (data.data as { notifications?: NotificationItem[] }).notifications
+          : (data.notifications as NotificationItem[] | undefined);
+      setItems(notifications ?? []);
+    } catch (err) {
+      if ((err as { name?: string })?.name === "AbortError") return;
+      setError("Falha de conexão ao carregar notificações.");
+    } finally {
+      setLoading(false);
     }
-    load();
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
+  }, [load]);
 
   const unreadIds = useMemo(
     () => items.filter((item) => !item.isRead).map((item) => item.id),
@@ -95,11 +112,34 @@ export default function DashboardNotificationsPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-brand-muted">Carregando notificações…</p>
+        <div className="space-y-3" aria-busy="true" aria-live="polite">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="rounded-xl border border-brand-border bg-brand-surface/50 px-4 py-3"
+            >
+              <div className="h-4 w-1/3 animate-pulse rounded bg-brand-border/70" />
+              <div className="mt-2 h-3 w-2/3 animate-pulse rounded bg-brand-border/50" />
+              <div className="mt-2 h-3 w-24 animate-pulse rounded bg-brand-border/40" />
+            </div>
+          ))}
+          <span className="sr-only">Carregando notificações…</span>
+        </div>
       ) : error ? (
-        <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
-          {error}
-        </p>
+        <div
+          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2"
+          role="alert"
+        >
+          <p className="text-sm text-red-300">{error}</p>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => load()}
+          >
+            Tentar novamente
+          </Button>
+        </div>
       ) : items.length === 0 ? (
         <p className="text-sm text-brand-muted">Nenhuma notificação disponível no momento.</p>
       ) : (

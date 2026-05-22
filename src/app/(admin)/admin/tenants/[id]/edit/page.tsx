@@ -44,8 +44,22 @@ export default function EditTenantPage() {
   }
 
   useEffect(() => {
+    if (!id) return;
+    const controller = new AbortController();
     async function load() {
-      const res = await fetch(`/api/admin/tenants/${id}`, { method: "GET" });
+      let res: Response;
+      try {
+        res = await fetch(`/api/admin/tenants/${id}`, {
+          method: "GET",
+          signal: controller.signal,
+        });
+      } catch (err) {
+        // AbortError ao trocar id é benigno; outros erros derrubam o load.
+        if ((err as { name?: string })?.name !== "AbortError") {
+          setLoading(false);
+        }
+        return;
+      }
       if (res.status === 404) {
         setTenant(null);
         setLoading(false);
@@ -101,6 +115,7 @@ export default function EditTenantPage() {
       setLoading(false);
     }
     load();
+    return () => controller.abort();
   }, [id]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -164,7 +179,7 @@ export default function EditTenantPage() {
         setError(data.error ?? "Erro ao atualizar");
         return;
       }
-      router.push(`/admin/tenants/${id}`);
+      router.push(`/superadmin/tenants/${id}`);
       router.refresh();
     } catch {
       setError("Erro de conexão");
@@ -188,7 +203,7 @@ export default function EditTenantPage() {
     return (
       <PageSection>
         <p className="text-brand-muted">Tenant não encontrado.</p>
-        <Link href="/admin/tenants" className="mt-2 inline-block text-sm text-brand-neon hover:text-brand-neon/80">
+        <Link href="/superadmin/tenants" className="mt-2 inline-block text-sm text-brand-neon hover:text-brand-neon/80">
           Voltar
         </Link>
       </PageSection>
@@ -199,7 +214,7 @@ export default function EditTenantPage() {
     <PageSection variant="plain" className="px-1 py-0 sm:px-2 md:px-2 md:pt-0 md:pb-0">
       <div className="mb-6">
         <Link
-          href={`/admin/tenants/${id}`}
+          href={`/superadmin/tenants/${id}`}
           className="text-sm text-brand-muted hover:text-brand-text transition-colors"
         >
           ← Voltar
@@ -397,6 +412,7 @@ export default function EditTenantPage() {
             <Input
               id="agent_api_key"
               type="password"
+              autoComplete="new-password"
               value={agentApiKey}
               onChange={(e) => setAgentApiKey(e.target.value)}
               className="w-full bg-brand-surface border-brand-border text-brand-text"
@@ -436,7 +452,7 @@ export default function EditTenantPage() {
             >
             {submitting ? "Salvando…" : "Salvar"}
           </Button>
-          <Link href={`/admin/tenants/${id}`}>
+          <Link href={`/superadmin/tenants/${id}`}>
             <Button type="button" variant="secondary">Cancelar</Button>
           </Link>
         </div>

@@ -27,10 +27,14 @@ export default function NewEvolutionInstancePage() {
   }, [searchParams]);
 
   useEffect(() => {
-    fetch("/api/admin/tenants")
-      .then((res) => res.ok ? res.json() : { tenants: [] })
+    const controller = new AbortController();
+    fetch("/api/admin/tenants", { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : { tenants: [] }))
       .then((data: { tenants?: Tenant[] }) => setTenants(data.tenants ?? []))
-      .catch(() => setTenants([]));
+      .catch((err) => {
+        if (err?.name !== "AbortError") setTenants([]);
+      });
+    return () => controller.abort();
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -67,7 +71,7 @@ export default function NewEvolutionInstancePage() {
     return (
       <div className="p-6">
         <div className="mb-4">
-          <Link href="/admin/integrations" className="text-sm text-brand-neon hover:opacity-90">
+          <Link href="/superadmin/integrations" className="text-sm text-brand-neon hover:opacity-90">
             ← Voltar às integrações
           </Link>
         </div>
@@ -98,7 +102,7 @@ export default function NewEvolutionInstancePage() {
           )}
         </div>
         <p className="mt-4">
-          <Link href="/admin/integrations/evolution/new" className="text-sm text-brand-neon hover:opacity-90">
+          <Link href="/superadmin/integrations/evolution/new" className="text-sm text-brand-neon hover:opacity-90">
             Cadastrar outra instância
           </Link>
         </p>
@@ -109,7 +113,7 @@ export default function NewEvolutionInstancePage() {
   return (
     <div className="p-6">
       <div className="mb-4">
-        <Link href="/admin/integrations" className="text-sm text-brand-neon hover:opacity-90">
+        <Link href="/superadmin/integrations" className="text-sm text-brand-neon hover:opacity-90">
           ← Voltar às integrações
         </Link>
       </div>
@@ -197,6 +201,7 @@ export default function NewEvolutionInstancePage() {
           <Input
             id="api_key"
             type="password"
+            autoComplete="new-password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             placeholder="Se a Evolution exige autenticação"
@@ -207,7 +212,7 @@ export default function NewEvolutionInstancePage() {
           <Button type="submit" disabled={submitting}>
             {submitting ? "Criando…" : "Conectar"}
           </Button>
-          <Link href="/admin/integrations">
+          <Link href="/superadmin/integrations">
             <Button type="button" variant="secondary">
               Cancelar
             </Button>

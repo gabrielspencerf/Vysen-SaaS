@@ -30,10 +30,14 @@ export default function NewUazapiInstancePage() {
   }, [searchParams]);
 
   useEffect(() => {
-    fetch("/api/admin/tenants")
+    const controller = new AbortController();
+    fetch("/api/admin/tenants", { signal: controller.signal })
       .then((res) => (res.ok ? res.json() : { tenants: [] }))
       .then((data: { tenants?: Tenant[] }) => setTenants(data.tenants ?? []))
-      .catch(() => setTenants([]));
+      .catch((err) => {
+        if (err?.name !== "AbortError") setTenants([]);
+      });
+    return () => controller.abort();
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -81,7 +85,7 @@ export default function NewUazapiInstancePage() {
     return (
       <div className="p-6">
         <div className="mb-4">
-          <Link href="/admin/integrations" className="text-sm text-brand-neon hover:opacity-90">
+          <Link href="/superadmin/integrations" className="text-sm text-brand-neon hover:opacity-90">
             ← Voltar às integrações
           </Link>
         </div>
@@ -98,7 +102,7 @@ export default function NewUazapiInstancePage() {
   return (
     <div className="p-6">
       <div className="mb-4">
-        <Link href="/admin/integrations" className="text-sm text-brand-neon hover:opacity-90">
+        <Link href="/superadmin/integrations" className="text-sm text-brand-neon hover:opacity-90">
           ← Voltar às integrações
         </Link>
       </div>
@@ -186,6 +190,7 @@ export default function NewUazapiInstancePage() {
           <Input
             id="token"
             type="password"
+            autoComplete="new-password"
             value={token}
             onChange={(e) => setToken(e.target.value)}
             placeholder="Ex: 85f5de3a-451b-4fd4-a615-35718ececf04"
@@ -199,6 +204,7 @@ export default function NewUazapiInstancePage() {
           <Input
             id="admin_token"
             type="password"
+            autoComplete="new-password"
             value={adminToken}
             onChange={(e) => setAdminToken(e.target.value)}
             placeholder="Se o endpoint exigir admin token"
@@ -212,6 +218,7 @@ export default function NewUazapiInstancePage() {
           <Input
             id="api_key"
             type="password"
+            autoComplete="new-password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             placeholder="Use apenas se o provedor trabalhar com API key"
@@ -222,7 +229,7 @@ export default function NewUazapiInstancePage() {
           <Button type="submit" disabled={submitting}>
             {submitting ? "Criando…" : "Conectar"}
           </Button>
-          <Link href="/admin/integrations">
+          <Link href="/superadmin/integrations">
             <Button type="button" variant="secondary">
               Cancelar
             </Button>
