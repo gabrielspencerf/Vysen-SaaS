@@ -90,14 +90,16 @@ import type {
 
 const REDIS_URL = process.env.REDIS_URL;
 if (!REDIS_URL) {
-  console.error("REDIS_URL não definida.");
+  workerLog.error("REDIS_URL não definida; abortando boot");
   process.exit(1);
 }
 
 try {
   assertProductionRuntimeWebhookSecrets();
 } catch (e) {
-  console.error("[worker] verificação de segurança na inicialização falhou:", e);
+  workerLog.error("verificação de segurança na inicialização falhou", {
+    error: e instanceof Error ? e.message : String(e),
+  });
   process.exit(1);
 }
 
@@ -125,21 +127,21 @@ const SHUTDOWN_DRAIN_TIMEOUT_MS = 25_000;
 function logRlsRolloutStatus(): void {
   const mode = env.workerDbAccessMode;
   const rlsEnforced = env.securityEnforceRls;
-  console.log("[worker] db access rollout", {
+  workerLog.info("db access rollout", {
     securityEnforceRls: rlsEnforced,
     workerDbAccessMode: mode,
   });
 
   if (rlsEnforced && mode === "off") {
-    console.warn(
-      "[worker] SECURITY_ENFORCE_RLS=true com WORKER_DB_ACCESS_MODE=off. " +
+    workerLog.warn(
+      "SECURITY_ENFORCE_RLS=true com WORKER_DB_ACCESS_MODE=off. " +
         "Risco de falha por contexto ausente em jobs durante rollout."
     );
   }
 
   if (rlsEnforced && mode === "tenant") {
-    console.warn(
-      "[worker] WORKER_DB_ACCESS_MODE=tenant ativo. Jobs globais (sem tenantId) " +
+    workerLog.warn(
+      "WORKER_DB_ACCESS_MODE=tenant ativo. Jobs globais (sem tenantId) " +
         "usam fallback bypass para manter compatibilidade operacional."
     );
   }
@@ -311,9 +313,17 @@ async function retryOrDlq(opts: {
     await enqueueDelayed(redis, { ...job, attempt: currentAttempt }, runAtMs);
   } catch (err) {
     // Se falhar o agendamento, tenta enqueue direto (sem delay) pra não perder o job.
-    console.error("[worker] enqueueDelayed falhou — re-enqueueing imediato", { queueName, err });
+    workerLog.error("enqueueDelayed falhou — re-enqueueing imediato", {
+      queueName,
+      jobType: job.type,
+      error: err instanceof Error ? err.message : String(err),
+    });
     await enqueue(redis, { ...job, attempt: currentAttempt }).catch((e) => {
-      console.error("[worker] enqueue imediato também falhou", { queueName, e });
+      workerLog.error("enqueue imediato também falhou", {
+        queueName,
+        jobType: job.type,
+        error: e instanceof Error ? e.message : String(e),
+      });
     });
   }
   await ackJob(redis, queueName, payload);
@@ -591,7 +601,10 @@ function startLoop(name: string, run: () => Promise<void>): void {
     try {
       await trackActive(run());
     } catch (err) {
-      console.error(`[${name}] consumer loop error`, err);
+      workerLog.error("consumer loop error", {
+        queueName: name,
+        error: err instanceof Error ? err.message : String(err),
+      });
     } finally {
       if (!shuttingDown) {
         setImmediate(tick);
@@ -655,12 +668,16 @@ function writeHeartbeat(): void {
   // Chave agregada (HEARTBEAT_KEY): mantida para compatibilidade — qualquer
   // worker que escreve "ganha". Útil pra healthcheck "tem ALGUM worker vivo?".
   heartbeatRedis.set(HEARTBEAT_KEY, now, "PX", MAX_AGE_MS).catch((err) => {
-    console.error("Heartbeat write failed:", err);
+    workerLog.error("heartbeat write failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
   });
   // Chave por instância (worker:heartbeat:<id>): permite detectar split-brain,
   // worker individual com problema, e dashboards de "quantas réplicas vivas".
   heartbeatRedis.set(WORKER_INSTANCE_KEY, now, "PX", MAX_AGE_MS).catch((err) => {
-    console.error("Heartbeat per-instance write failed:", err);
+    workerLog.error("heartbeat per-instance write failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
   });
 }
 
@@ -671,11 +688,16 @@ const authCleanupInterval = setInterval(() => {
   cleanupExpiredAuthArtifacts()
     .then((result) => {
       if (result.sessionsDeleted > 0 || result.passwordResetTokensDeleted > 0) {
-        console.log("[auth-cleanup] expired records removed", result);
+        workerLog.info("auth-cleanup removed expired records", {
+          sessionsDeleted: result.sessionsDeleted,
+          passwordResetTokensDeleted: result.passwordResetTokensDeleted,
+        });
       }
     })
     .catch((err) => {
-      console.error("[auth-cleanup] failed", err);
+      workerLog.error("auth-cleanup failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
     });
 }, 15 * 60 * 1000);
 
@@ -683,17 +705,23 @@ const webhookRetentionInterval = setInterval(() => {
   cleanupWebhookEvents()
     .then((r) => {
       if (r.redactedRows > 0) {
-        console.log("[webhook-retention] payloads anonimizados", r.redactedRows);
+        workerLog.info("webhook-retention payloads anonimizados", {
+          redactedRows: r.redactedRows,
+        });
       }
     })
     .catch((err) => {
-      console.error("[webhook-retention] failed", err);
+      workerLog.error("webhook-retention failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
     });
 }, 24 * 60 * 60 * 1000);
 
 setTimeout(() => {
   cleanupWebhookEvents().catch((err) => {
-    console.error("[webhook-retention] initial run failed", err);
+    workerLog.error("webhook-retention initial run failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
   });
 }, 120_000);
 
@@ -701,26 +729,38 @@ const vysenUsageRetentionInterval = setInterval(() => {
   cleanupVysenUsageEvents()
     .then((r) => {
       if (r.removed > 0) {
-        console.log("[vysen-usage-retention] eventos removidos", r.removed);
+        workerLog.info("vysen-usage-retention removed events", { removed: r.removed });
       }
     })
     .catch((err) => {
-      console.error("[vysen-usage-retention] failed", err);
+      workerLog.error("vysen-usage-retention failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
     });
 }, 24 * 60 * 60 * 1000);
 
 setTimeout(() => {
   cleanupVysenUsageEvents().catch((err) => {
-    console.error("[vysen-usage-retention] initial run failed", err);
+    workerLog.error("vysen-usage-retention initial run failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
   });
 }, 180_000);
 
 const delayedSchedulerInterval = setInterval(() => {
-  tickDelayedScheduler().catch((err) => console.error("[delayed-scheduler] failed", err));
+  tickDelayedScheduler().catch((err) =>
+    workerLog.error("delayed-scheduler failed", {
+      error: err instanceof Error ? err.message : String(err),
+    })
+  );
 }, DELAYED_SCHEDULER_INTERVAL_MS);
 
 const reaperInterval = setInterval(() => {
-  tickReaper().catch((err) => console.error("[reaper] failed", err));
+  tickReaper().catch((err) =>
+    workerLog.error("reaper failed", {
+      error: err instanceof Error ? err.message : String(err),
+    })
+  );
 }, REAPER_INTERVAL_MS);
 
 // === Connect & shutdown ===
@@ -754,7 +794,9 @@ redis.on("connect", () => {
 });
 
 redis.on("error", (err) => {
-  console.error("Worker: Redis error", err);
+  workerLog.error("Redis error", {
+    error: err instanceof Error ? err.message : String(err),
+  });
 });
 
 async function shutdown(signal: string): Promise<void> {
@@ -799,14 +841,18 @@ async function shutdown(signal: string): Promise<void> {
 
 process.on("SIGINT", () => {
   shutdown("SIGINT").catch((err) => {
-    console.error("[worker] shutdown failed", err);
+    workerLog.error("shutdown failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
     process.exit(1);
   });
 });
 
 process.on("SIGTERM", () => {
   shutdown("SIGTERM").catch((err) => {
-    console.error("[worker] shutdown failed", err);
+    workerLog.error("shutdown failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
     process.exit(1);
   });
 });

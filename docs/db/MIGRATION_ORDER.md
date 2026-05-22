@@ -1,59 +1,71 @@
-# Ordem dos arquivos de migration
+# Ordem real das migrations
 
-O Drizzle Kit gera uma única migration por execução de `drizzle-kit generate`. Para alinhar com as etapas do schema, duas abordagens possíveis:
+A pasta `src/db/migrations/` é a **fonte canônica**. Este documento reflete o
+estado real do journal (`src/db/migrations/meta/_journal.json`) — não é mais
+um "plano por domínio", e sim o histórico aplicado.
 
-## Abordagem 1: Uma migration por etapa (recomendada para setup inicial)
+## Estado atual (até 2026-05)
 
-Rodar `drizzle-kit generate` **uma vez** após todos os schemas estarem prontos. O Kit gera um único arquivo SQL com todas as tabelas na ordem correta (respeitando FKs). A ordem lógica das tabelas na migration segue as dependências:
+| Idx | Tag | Conteúdo |
+|---|---|---|
+| 0 | `0000_concerned_blacklash` | Schema inicial completo (auth, integrations, raw-events, funnels-leads, conversations, snapshots, ai-alerts-audit). |
+| 1 | `0001_google_ads_currency_code` | Coluna `currency_code` em `google_ads_accounts`. |
+| 2 | `0002_app_global_config` | Tabela `app_global_config` (setup web criptografado). |
+| 3 | `0003_hardening_integrations` | Hardening de integrações (UAZAPI, dedup raw events, Typebot metrics). |
+| 4 | `0004_married_wasp` | user_profiles, complaints, onboarding, pagespeed, tenant_assets, uazapi_instances/webhook_events, contacts, opportunities, products + ALTERs em conversations (`evolution_instance_id` nullable + `uazapi_instance_id`, `contact_id`). |
+| 5 | `0004b_uazapi_webhook_and_conversations` | (Era duplicata 0004 antes do rename em 2026-05.) CHECK constraint exclusiva Evolution/UAZAPI em conversations + indexes únicos parciais. |
+| 6 | `0005_contacts_opportunities_user_profiles` | Reforço idempotente de objetos da 0004. |
+| 7 | `0006_negocio_produtos_onboarding_pagespeed_reclamacoes` | Idem; também garante `products`/`onboarding_steps`/`pagespeed_results` em ambientes parciais. |
+| 8 | `0007_pagespeed_metric_date_products_billing_mrr` | `pagespeed_results.metric_date`, `products.billing_*`, MRR. Limpa duplicatas existentes. |
+| 9 | `0008_seed_onboarding_steps` | Seed dos passos de onboarding. |
+| 10 | `0009_add_conversations_uazapi_instance_id` | Garantia idempotente que a coluna existe em DBs cuja 0004 aplicou parcial. |
+| 11 | `0010_conversation_messages_sent_by_bot` | Coluna `sent_by_bot` em `conversation_messages`. |
+| 12 | `0011_auth_password_reset_tokens` | Tabela `password_reset_tokens`. |
+| 13 | `0012_uazapi_structured_credentials` | `uazapi_instances.token_encrypted` + `admin_token_encrypted`. |
+| 14 | `0013_agent_notifications_followups` | `internal_notifications` + `followup_tasks`. |
+| 15 | `0014_vysen_knowledge_pgvector` | `knowledge_documents/chunks/embeddings` (RAG via pgvector). |
+| 16 | `0015_vysen_usage_events` | Telemetria do copiloto Vysen. |
+| 17 | `0016_security_rls_tenant_policies` | Políticas RLS opt-in via `app.enforce_rls`. |
+| 18 | `0017_tenant_role_permissions` | Overrides de permissão por tenant. |
+| 19 | `0018_meta_ads_and_clarity` | Tabelas Meta Ads + Clarity (OAuth, accounts, snapshots, logs). |
+| 20 | `0019_chatwoot_whatsapp_cloud_channels` | Canais nativos Chatwoot + WhatsApp Cloud (accounts, numbers, webhook_events, ALTER conversations CHECK quaternário). |
+| 21 | `0020_leads_status_default` | `leads.status` ganhou `DEFAULT 'new'`. |
+| 22 | `0021_knowledge_scope_check` | CHECK constraint `(scope='global' ∧ tenant_id NULL) ∨ (scope='tenant' ∧ tenant_id NOT NULL)` em knowledge_*. |
+| 23 | `0022_vysen_usage_events_correlation` | `request_id` + `estimated_cost_usd` em vysen_usage_events; índice parcial. |
+| 24 | `0023_knowledge_embeddings_hnsw` | Substitui IVFFlat por HNSW em knowledge_embeddings.embedding. |
+| 25 | `0024_opportunity_complaint_enums` | `opportunities.stage` e `complaints.status` migrados para pgEnum. |
+| 26 | `0025_operational_created_at_indexes` | Índices `(tenant_id, created_at DESC)` em complaints/contacts/opportunities/products. |
 
-1. Enums (criados primeiro)
-2. **Auth:** tenants → users → roles → permissions → role_permissions → memberships → sessions
-3. **Integrações:** integrations → google_ads_accounts → typebot_bots → evolution_instances
-4. **Raw events:** typebot_webhook_events → evolution_webhook_events → google_ads_sync_logs
-5. **Funis e leads:** funnels → funnel_steps → lead_sources → leads → utm_attributions → lead_events
-6. **Conversas:** conversations → conversation_messages
-7. **Snapshots:** campaign_snapshots → bot_metrics_snapshots → instance_status_logs → funnel_step_metrics_snapshot
-8. **IA, alertas, auditoria:** ai_classifications → kpi_rules → alerts → audit_logs → processing_failures
+## Aplicar em produção
 
-## Abordagem 2: Migrations incrementais por domínio
+- **Single réplica**: `npm run db:migrate` direto.
+- **Múltiplas réplicas no boot (Swarm/K8s)**: `npm run db:migrate:safe` — wrapper com
+  `pg_advisory_lock(4242)` que serializa execução entre réplicas concorrentes.
+  Os YAMLs do Swarm em `docker-stack.swarm*.yml` já chamam o wrapper.
 
-Se quiser um arquivo de migration por domínio (útil para histórico e rollback granular):
+## Convenções
 
-1. **0001_auth** — Exportar apenas schemas em `schema/auth` + enums usados (nenhum). Rodar generate com schema filtrado (ex.: schema: "./src/db/schema/auth/index.ts") ou gerar e depois editar o SQL para conter só as tabelas auth.
-2. **0002_integrations** — integrations + google_ads_accounts + typebot_bots + evolution_instances (e provider_enum).
-3. **0003_raw_events** — typebot_webhook_events, evolution_webhook_events, google_ads_sync_logs.
-4. **0004_funnels_leads** — funnels, funnel_steps, lead_sources, leads, utm_attributions, lead_events (e lead_status_enum, provider_enum já criados).
-5. **0005_conversations** — conversations, conversation_messages (e conversation_status_enum).
-6. **0006_snapshots** — campaign_snapshots, bot_metrics_snapshots, instance_status_logs, funnel_step_metrics_snapshot.
-7. **0007_ai_alerts_audit** — ai_classifications, kpi_rules, alerts, audit_logs, processing_failures (e enums restantes).
-
-O Drizzle Kit padrão não suporta múltiplos arquivos de schema por generate; para abordagem 2 é necessário usar configurações separadas por etapa ou dividir o SQL gerado manualmente em vários arquivos na pasta `migrations/`.
-
-## Ordem recomendada dos arquivos na pasta `migrations/`
-
-Se você gerar uma única migration, o nome será algo como `0000_xxx.sql`. Se dividir manualmente, use a ordem:
-
-```
-src/db/migrations/
-├── 0000_enums.sql          (opcional; enums podem vir no início da primeira migration)
-├── 0001_auth.sql
-├── 0002_integrations.sql
-├── 0003_raw_events.sql
-├── 0004_funnels_leads.sql
-├── 0005_conversations.sql
-├── 0006_snapshots.sql
-└── 0007_ai_alerts_audit.sql
-```
-
-Ou, com generate único:
-
-```
-src/db/migrations/
-└── 0000_initial.sql   (tudo na ordem de dependência)
-```
+- **Idempotência obrigatória** em toda migration nova: `CREATE TABLE IF NOT EXISTS`,
+  `ADD COLUMN IF NOT EXISTS`, `ADD CONSTRAINT ... IF NOT EXISTS` via blocos
+  `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object THEN NULL END $$;`.
+- **Enums novos**: adicionar valores no FINAL do enum (ordem importa para upgrade
+  de versões mais antigas do Postgres que não suportam reordenação).
+- **Backfill antes de constraint**: ao adicionar NOT NULL / CHECK em coluna
+  existente, primeiro UPDATE para preencher/normalizar valores; só então
+  o ALTER. Ver `0024_opportunity_complaint_enums.sql` como referência.
+- **`DEFAULT` + `ALTER COLUMN TYPE`**: PostgreSQL exige `DROP DEFAULT` antes do
+  ALTER e re-aplicar com cast explícito depois.
 
 ## Verificações pós-geração
 
-- **Índices únicos parciais:** Conferir se os `CREATE UNIQUE INDEX ... WHERE ...` foram gerados para `leads` (3 índices) e `ai_classifications` (1 índice). Se não, adicionar SQL manual na migration.
-- **Enums:** Conferir se todos os `CREATE TYPE ... AS ENUM` aparecem antes do primeiro uso nas tabelas.
-- **NOTICEs de truncamento:** Se ao rodar `db:migrate` aparecerem avisos do tipo "o identificador ... será truncado", são inofensivos: o Postgres limita nomes a 63 caracteres e trunca FKs longas geradas pelo Drizzle. A migration segue com sucesso. Detalhes em [docs/log/REGISTRO.md](../../log/REGISTRO.md) (entrada 1.10).
+- **Índices únicos parciais**: confirmar `CREATE UNIQUE INDEX ... WHERE ...` em
+  `leads` (3 índices), `ai_classifications` (1 índice), raw events (`*_dedup_unique`).
+- **Enums**: todos os `CREATE TYPE ... AS ENUM` devem vir antes do primeiro uso.
+- **NOTICEs de truncamento**: nomes de FK > 63 chars são truncados pelo
+  Postgres — inofensivo. Ver `docs/log/REGISTRO.md` (entrada 1.10).
+
+## Histórico de drift resolvido
+
+- **2026-05** — Duplicata `0004_uazapi_webhook_and_conversations.sql` renomeada
+  para `0004b_*` (mesmo conteúdo SQL — só a tag mudou). DB virgem agora aplica
+  migrate sem ambiguidade. Detalhes em `docs/REVISAO_GERAL_2026-05.md`.
