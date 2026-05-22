@@ -21,6 +21,8 @@ import {
   workerInstanceHeartbeatKey,
   workerInstanceId,
 } from "./readiness";
+import { workerLog } from "./logger";
+import { recordWorkerMetric } from "./metrics";
 import { env } from "@/config/env";
 import {
   enqueue,
@@ -221,7 +223,13 @@ async function recordProcessingFailure(params: {
       await runWithRlsContext({ tenantId: null, bypassRls: true }, insertFailure);
     }
   } catch (err) {
-    console.error("[worker] failed to persist processing failure", err);
+    workerLog.error("failed to persist processing failure", {
+      queueName: params.queueName,
+      jobType: params.job.type,
+      jobId: resolveJobId(params.job),
+      tenantId: resolveTenantId(params.job),
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 
@@ -274,9 +282,12 @@ async function retryOrDlq(opts: {
 
   if (currentAttempt >= policy.maxAttempts) {
     await pushToDlq(queueName, dlqName, { ...job, attempt: currentAttempt }, error);
+    recordWorkerMetric("sent_to_dlq", queueName);
     await ackJob(redis, queueName, payload);
     return;
   }
+  recordWorkerMetric("failed", queueName);
+  recordWorkerMetric("retried", queueName);
 
   const backoffMs = computeBackoffMs(currentAttempt, policy);
   const runAtMs = Date.now() + backoffMs;
@@ -325,15 +336,25 @@ async function executeAndAck<T>(opts: {
     const result = await withWorkerAccessContext(job, () => run());
     const errorMessage = isFailure(result);
     if (errorMessage) {
-      console.error(`[${queueName}] processing failed`, {
+      workerLog.error("processing failed", {
+        queueName,
+        jobType: job.type,
         jobId: resolveJobId(job),
+        tenantId: resolveTenantId(job),
+        attempt: job.attempt ?? 0,
         error: errorMessage,
       });
       await retryOrDlq({ job, payload, queueName, dlqName, error: errorMessage });
       return;
     }
     const policy = getQueuePolicy(job);
-    console.log(`[${queueName}] processed`, { jobId: resolveJobId(job) });
+    workerLog.info("processed", {
+      queueName,
+      jobType: job.type,
+      jobId: resolveJobId(job),
+      tenantId: resolveTenantId(job),
+      attempt: job.attempt ?? 0,
+    });
     emitDomainEvent({
       name: "worker.job.processed",
       tenantId: resolveTenantId(job),
@@ -344,10 +365,18 @@ async function executeAndAck<T>(opts: {
         sloTargetSeconds: policy.sloTargetSeconds,
       },
     });
+    recordWorkerMetric("processed", queueName);
     await ackJob(redis, queueName, payload);
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
-    console.error(`[${queueName}] consumer threw`, { error });
+    workerLog.error("consumer threw", {
+      queueName,
+      jobType: job.type,
+      jobId: resolveJobId(job),
+      tenantId: resolveTenantId(job),
+      attempt: job.attempt ?? 0,
+      error,
+    });
     await retryOrDlq({ job, payload, queueName, dlqName, error });
   }
 }
@@ -580,10 +609,13 @@ async function tickDelayedScheduler(): Promise<void> {
     try {
       const moved = await promoteDueDelayedJobs(redis, queueName);
       if (moved > 0) {
-        console.log(`[delayed-scheduler] promoveu ${moved} jobs em ${queueName}`);
+        workerLog.info("delayed-scheduler promoted jobs", { queueName, moved });
       }
     } catch (err) {
-      console.error("[delayed-scheduler] tick failed", { queueName, err });
+      workerLog.error("delayed-scheduler tick failed", {
+        queueName,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 }
@@ -594,15 +626,21 @@ async function tickReaper(): Promise<void> {
     try {
       const revived = await reapStaleProcessing(redis, queueName, STALE_AFTER_MS);
       if (revived > 0) {
-        console.warn(`[reaper] re-enfileirou ${revived} jobs presos em ${queueName}`);
+        workerLog.warn("reaper revived stale jobs", { queueName, revived });
         emitDomainEvent({
           name: "worker.reaper.revived",
           level: "warn",
           metadata: { queueName, revived },
         });
+        for (let i = 0; i < revived; i += 1) {
+          recordWorkerMetric("reaper_revived", queueName);
+        }
       }
     } catch (err) {
-      console.error("[reaper] tick failed", { queueName, err });
+      workerLog.error("reaper tick failed", {
+        queueName,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 }
@@ -688,9 +726,20 @@ const reaperInterval = setInterval(() => {
 // === Connect & shutdown ===
 
 redis.on("connect", () => {
-  console.log(
-    `Worker [${WORKER_INSTANCE_ID}]: Redis conectado; heartbeat, schedulers e filas typebot/evolution/uazapi/chatwoot/whatsapp-cloud/google-ads/meta-ads/clarity/ai/followup ativos.`
-  );
+  workerLog.info("Redis conectado; heartbeat/schedulers/consumers ativos", {
+    queues: [
+      "typebot",
+      "evolution",
+      "uazapi",
+      "chatwoot",
+      "whatsapp-cloud",
+      "google-ads",
+      "meta-ads",
+      "clarity",
+      "ai-classification",
+      "followup",
+    ].join(","),
+  });
   logRlsRolloutStatus();
   startLoop("typebot", runTypebotConsumer);
   startLoop("evolution", runEvolutionConsumer);
@@ -711,7 +760,11 @@ redis.on("error", (err) => {
 async function shutdown(signal: string): Promise<void> {
   if (shuttingDown) return;
   shuttingDown = true;
-  console.log(`[worker] ${signal} recebido — drenando jobs ativos (max ${SHUTDOWN_DRAIN_TIMEOUT_MS}ms)`);
+  workerLog.info("shutdown signal recebido — drenando jobs ativos", {
+    signal,
+    drainTimeoutMs: SHUTDOWN_DRAIN_TIMEOUT_MS,
+    activeJobs: activeJobs.size,
+  });
 
   clearInterval(heartbeatInterval);
   clearInterval(authCleanupInterval);
@@ -729,11 +782,12 @@ async function shutdown(signal: string): Promise<void> {
   }
 
   if (activeJobs.size > 0) {
-    console.warn(
-      `[worker] ${activeJobs.size} jobs ainda ativos após drain — items ficarão na processing list e serão recuperados pelo reaper na próxima inicialização`
+    workerLog.warn(
+      "jobs ainda ativos após drain — ficarão na processing list e serão recuperados pelo reaper",
+      { remaining: activeJobs.size }
     );
   } else {
-    console.log("[worker] drain completo");
+    workerLog.info("drain completo");
   }
 
   try {

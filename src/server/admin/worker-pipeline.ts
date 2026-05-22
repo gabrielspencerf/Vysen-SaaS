@@ -11,6 +11,7 @@ import {
   uazapiWebhookEvents,
   whatsappCloudWebhookEvents,
 } from "@/db/schema";
+import { ALL_QUEUE_NAMES as ALL_QUEUE_NAMES_FOR_METRICS } from "@/workers/queue";
 import { createRedisClient } from "@/server/redis";
 import { HEARTBEAT_KEY, MAX_AGE_MS } from "@/workers/readiness";
 import {
@@ -490,6 +491,8 @@ export interface WorkerPipelineSnapshot {
   pendingRaw: PendingRawCounts;
   backlogTotal: number;
   dlqTotal: number;
+  /** Contadores acumulados desde o último reset do Redis. */
+  metrics?: import("@/workers/metrics").WorkerMetricsSnapshot;
 }
 
 function metricForPipeline(pipelineId: string, depths: QueueDepths): { q: number; dlq: number } {
@@ -705,10 +708,12 @@ async function loadWorkerHeartbeat(): Promise<{
 }
 
 export async function getWorkerPipelineSnapshot(): Promise<WorkerPipelineSnapshot> {
-  const [{ redisOk, depths }, pendingRaw, hb] = await Promise.all([
+  const { getWorkerMetricsSnapshot } = await import("@/workers/metrics");
+  const [{ redisOk, depths }, pendingRaw, hb, metrics] = await Promise.all([
     loadQueueDepths(),
     loadPendingRawCounts(),
     loadWorkerHeartbeat(),
+    getWorkerMetricsSnapshot(ALL_QUEUE_NAMES_FOR_METRICS),
   ]);
 
   const backlogTotal =
@@ -745,6 +750,7 @@ export async function getWorkerPipelineSnapshot(): Promise<WorkerPipelineSnapsho
     pendingRaw,
     backlogTotal,
     dlqTotal,
+    metrics,
   };
 }
 
