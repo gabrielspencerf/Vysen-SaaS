@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageSection } from "@/components/layout";
 import { Button } from "@/components/ui";
+import { formatDateTime } from "@/lib/i18n/date";
 
 interface NotificationItem {
   id: string;
@@ -13,13 +14,6 @@ interface NotificationItem {
   resourceId: string | null;
   isRead: boolean;
   createdAt: string;
-}
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
 }
 
 export default function DashboardNotificationsPage() {
@@ -155,7 +149,7 @@ export default function DashboardNotificationsPage() {
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-brand-text">{item.title}</p>
-                <span className="text-xs text-brand-muted">{formatDate(item.createdAt)}</span>
+                <span className="text-xs text-brand-muted">{formatDateTime(item.createdAt)}</span>
               </div>
               <p className="mt-1 text-sm text-brand-muted">{item.message}</p>
               <div className="mt-2 flex flex-wrap gap-2 text-xs">

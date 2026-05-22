@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { MessageSquare, Search } from "lucide-react";
 import { Badge } from "@/components/ui";
 import { Input } from "@/components/ui";
+import { formatDate } from "@/lib/i18n/date";
 
 /** Payload vindo do Server Component (datas já em ISO string). */
 export type ConversationListItem = {
@@ -31,7 +32,7 @@ function formatRelativeTime(d: Date | string): string {
   if (diffH < 24) return `há ${diffH} h`;
   const diffD = Math.floor(diffH / 24);
   if (diffD < 7) return `há ${diffD} d`;
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(new Date(d));
+  return formatDate(d);
 }
 
 function statusBadgeVariant(

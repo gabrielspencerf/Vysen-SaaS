@@ -10,6 +10,8 @@ export const providerEnum = pgEnum("provider_enum", [
   "typebot",
   "evolution",
   "uazapi",
+  "chatwoot",
+  "whatsapp_cloud",
 ]);
 
 /** Status do lead no funil */
@@ -54,6 +56,22 @@ export const alertStatusEnum = pgEnum("alert_status_enum", [
   "active",
   "acknowledged",
   "resolved",
+]);
+
+/** Estágio de oportunidade comercial */
+export const opportunityStageEnum = pgEnum("opportunity_stage_enum", [
+  "open",
+  "qualified",
+  "negotiating",
+  "won",
+  "lost",
+]);
+
+/** Status de reclamação (complaint) */
+export const complaintStatusEnum = pgEnum("complaint_status_enum", [
+  "open",
+  "in_progress",
+  "closed",
 ]);
 
 /** Origem do alerta */

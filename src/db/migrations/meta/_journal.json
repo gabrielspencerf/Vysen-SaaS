@@ -169,6 +169,20 @@
       "when": 1747987200001,
       "tag": "0022_vysen_usage_events_correlation",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1748073600000,
+      "tag": "0023_knowledge_embeddings_hnsw",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1748073600001,
+      "tag": "0024_opportunity_complaint_enums",
+      "breakpoints": true
     }
   ]
 }

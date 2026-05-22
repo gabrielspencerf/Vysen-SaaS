@@ -3,20 +3,14 @@ import { PageSection } from "@/components/layout";
 import { ListTableHeader, ListRowCard } from "@/components/layout";
 import { DashboardPageHeader } from "@/components/layout";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Input, Button } from "@/components/ui";
+import { Input, Button, LinkButton } from "@/components/ui";
 import { ImportExportActions } from "@/components/dashboard/import-export-actions";
 import Link from "next/link";
 import { Users } from "lucide-react";
 import { agentDebugLog } from "@/server/debug/agent-debug-log";
+import { formatDateTime as formatDate } from "@/lib/i18n/date";
 
 const LEADS_LIMIT = 200;
-
-function formatDate(d: Date): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(d));
-}
 
 export default async function DashboardLeadsPage({
   searchParams,
@@ -47,12 +41,14 @@ export default async function DashboardLeadsPage({
         badges={[`${leads.length} itens`]}
         actions={
           <>
-            <Link
+            <LinkButton
               href="/dashboard/leads/kanban"
+              variant="outline"
+              size="sm"
               className="rounded-md border border-brand-border px-2.5 py-1 text-xs font-medium text-brand-muted transition hover:bg-brand-surface hover:text-brand-text"
             >
               Ver Kanban
-            </Link>
+            </LinkButton>
             <ImportExportActions
               exportUrl="/api/dashboard/leads/export"
               importUrl="/api/dashboard/leads/import"

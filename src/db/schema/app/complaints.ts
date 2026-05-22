@@ -1,6 +1,7 @@
 import { index, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { tenants } from "../auth/tenants";
 import { users } from "../auth/users";
+import { complaintStatusEnum } from "../../enums";
 
 /**
  * Reclamações / feedback negativo do cliente (tenant) sobre o serviço.
@@ -18,8 +19,8 @@ export const complaints = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     subject: varchar("subject", { length: 255 }),
     body: text("body").notNull(),
-    /** open | in_progress | closed */
-    status: varchar("status", { length: 32 }).notNull().default("open"),
+    /** open | in_progress | closed — tipado via complaint_status_enum */
+    status: complaintStatusEnum("status").notNull().default("open"),
     createdAt: timestamp("created_at", { withTimezone: true, precision: 6 })
       .defaultNow()
       .notNull(),

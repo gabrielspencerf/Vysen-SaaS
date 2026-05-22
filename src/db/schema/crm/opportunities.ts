@@ -10,6 +10,7 @@ import { tenants } from "../auth/tenants";
 import { leads } from "../funnels-leads/leads";
 import { contacts } from "../contacts";
 import { conversations } from "../conversations/conversations";
+import { opportunityStageEnum } from "../../enums";
 
 /**
  * Oportunidades: vínculo entre lead e/ou contato com uma conversa/negócio.
@@ -30,8 +31,8 @@ export const opportunities = pgTable(
     conversationId: uuid("conversation_id").references(() => conversations.id, {
       onDelete: "set null",
     }),
-    /** Estágio: open, qualified, won, lost, etc. */
-    stage: varchar("stage", { length: 64 }).notNull().default("open"),
+    /** Estágio do negócio (enum tipado em src/db/enums.ts → opportunity_stage_enum) */
+    stage: opportunityStageEnum("stage").notNull().default("open"),
     title: varchar("title", { length: 255 }),
     /** Data de início do contato comercial */
     contactStartedAt: timestamp("contact_started_at", {

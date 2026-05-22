@@ -56,6 +56,37 @@ export function LeadsKanbanBoard({ columns }: { columns: Column[] }) {
     if (!res.ok) throw new Error("Falha ao atualizar status");
   };
 
+  /**
+   * Move um lead entre colunas, independentemente do gesto que disparou (drag
+   * ou select via teclado). Atualiza state otimisticamente, persiste no servidor
+   * e faz rollback se a API falhar.
+   */
+  const moveLead = async (leadId: string, targetStatus: string) => {
+    const lead = localColumns
+      .flatMap((c) => c.leads)
+      .find((l) => l.id === leadId);
+    if (!lead || lead.status === targetStatus) return;
+    setLocalColumns((prev) =>
+      prev.map((col) => {
+        if (col.status === lead.status) {
+          return { ...col, leads: col.leads.filter((l) => l.id !== leadId) };
+        }
+        if (col.status === targetStatus) {
+          return {
+            ...col,
+            leads: [...col.leads, { ...lead, status: targetStatus }],
+          };
+        }
+        return col;
+      })
+    );
+    try {
+      await updateLeadStatus(leadId, targetStatus);
+    } catch {
+      setLocalColumns(columns.map((c) => ({ ...c, leads: [...c.leads] })));
+    }
+  };
+
   const handleDragStart = (e: React.DragEvent, leadId: string) => {
     setMoving(leadId);
     e.dataTransfer.setData("text/plain", leadId);
@@ -72,32 +103,7 @@ export function LeadsKanbanBoard({ columns }: { columns: Column[] }) {
     const leadId = e.dataTransfer.getData("text/plain");
     if (!leadId || moving === null) return;
     setMoving(null);
-
-    const lead = localColumns
-      .flatMap((c) => c.leads)
-      .find((l) => l.id === leadId);
-    if (!lead || lead.status === targetStatus) return;
-
-    setLocalColumns((prev) =>
-      prev.map((col) => {
-        if (col.status === lead.status) {
-          return { ...col, leads: col.leads.filter((l) => l.id !== leadId) };
-        }
-        if (col.status === targetStatus) {
-          return {
-            ...col,
-            leads: [...col.leads, { ...lead, status: targetStatus }],
-          };
-        }
-        return col;
-      })
-    );
-
-    try {
-      await updateLeadStatus(leadId, targetStatus);
-    } catch {
-      setLocalColumns(columns.map((c) => ({ ...c, leads: [...c.leads] })));
-    }
+    await moveLead(leadId, targetStatus);
   };
 
   return (
@@ -157,6 +163,26 @@ export function LeadsKanbanBoard({ columns }: { columns: Column[] }) {
                       {formatRelativeDate(lead.lastSeenAt)}
                     </span>
                   </div>
+                  {/* Alternativa acessível ao drag&drop: dropdown que muda o
+                      status do lead. Reach por teclado, screen reader e touch
+                      em mobile (onde drag entre colunas é difícil). */}
+                  <label className="mt-2 block">
+                    <span className="sr-only">Mover {lead.name ?? "lead"} para outra etapa</span>
+                    <select
+                      value={lead.status}
+                      onChange={(e) => {
+                        void moveLead(lead.id, e.target.value);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-1 w-full rounded-md border border-brand-border bg-brand-surface px-2 py-1 text-[11px] text-brand-text focus:outline-none focus:ring-1 focus:ring-brand-neon"
+                    >
+                      {localColumns.map((c) => (
+                        <option key={c.status} value={c.status}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
               ))
             )}
