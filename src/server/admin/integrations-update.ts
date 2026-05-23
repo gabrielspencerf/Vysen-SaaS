@@ -4,7 +4,13 @@
  */
 import { and, eq, ne } from "drizzle-orm";
 import { getDb } from "@/server/db";
-import { evolutionInstances, typebotBots, uazapiInstances } from "@/db/schema";
+import {
+  evolutionInstances,
+  typebotBots,
+  uazapiInstances,
+  chatwootAccounts,
+  whatsappCloudNumbers,
+} from "@/db/schema";
 import { encryptSecretForStorage } from "@/server/security/secret-storage";
 import { normalizeUazapiCredential } from "@/lib/uazapi-credentials";
 import { recordTenantActivity } from "@/server/tenancy/tenant-activity";
@@ -594,6 +600,332 @@ export async function updateTypebotBotById(input: {
       provider: "typebot",
       integrationId: updated.id,
     },
+  });
+  return updated;
+}
+
+// ============================================================================
+// Chatwoot
+// ============================================================================
+
+export async function getChatwootAccountById(
+  id: string
+): Promise<
+  | {
+      id: string;
+      tenantId: string;
+      externalId: string;
+      baseUrl: string;
+      inboxId: string | null;
+      label: string | null;
+      hasApiToken: boolean;
+    }
+  | IntegrationNotFound
+> {
+  const db = getDb();
+  const [row] = await db
+    .select({
+      id: chatwootAccounts.id,
+      tenantId: chatwootAccounts.tenantId,
+      externalId: chatwootAccounts.externalId,
+      baseUrl: chatwootAccounts.baseUrl,
+      inboxId: chatwootAccounts.inboxId,
+      label: chatwootAccounts.label,
+      apiTokenEncrypted: chatwootAccounts.apiTokenEncrypted,
+    })
+    .from(chatwootAccounts)
+    .where(eq(chatwootAccounts.id, id))
+    .limit(1);
+  if (!row) return { error: "not_found" };
+  return {
+    id: row.id,
+    tenantId: row.tenantId,
+    externalId: row.externalId,
+    baseUrl: row.baseUrl,
+    inboxId: row.inboxId,
+    label: row.label,
+    hasApiToken: Boolean(row.apiTokenEncrypted),
+  };
+}
+
+export async function updateChatwootAccountById(input: {
+  id: string;
+  externalId?: string;
+  baseUrl?: string;
+  inboxId?: string | null;
+  label?: string | null;
+  /** string vazia = remover; undefined = manter. */
+  apiToken?: string | null;
+  actorUserId?: string | null;
+}): Promise<
+  | {
+      id: string;
+      tenantId: string;
+      externalId: string;
+      baseUrl: string;
+      inboxId: string | null;
+      label: string | null;
+    }
+  | IntegrationNotFound
+  | IntegrationDuplicate
+> {
+  const db = getDb();
+  const [current] = await db
+    .select({
+      id: chatwootAccounts.id,
+      tenantId: chatwootAccounts.tenantId,
+      externalId: chatwootAccounts.externalId,
+      baseUrl: chatwootAccounts.baseUrl,
+      inboxId: chatwootAccounts.inboxId,
+      label: chatwootAccounts.label,
+    })
+    .from(chatwootAccounts)
+    .where(eq(chatwootAccounts.id, input.id))
+    .limit(1);
+  if (!current) return { error: "not_found" };
+
+  if (input.externalId !== undefined && input.externalId.trim() !== current.externalId) {
+    const [conflict] = await db
+      .select({ id: chatwootAccounts.id })
+      .from(chatwootAccounts)
+      .where(
+        and(
+          eq(chatwootAccounts.tenantId, current.tenantId),
+          eq(chatwootAccounts.externalId, input.externalId.trim()),
+          ne(chatwootAccounts.id, current.id)
+        )
+      )
+      .limit(1);
+    if (conflict) return { error: "duplicate_external_id" };
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (input.externalId !== undefined) updates.externalId = input.externalId.trim();
+  if (input.baseUrl !== undefined) updates.baseUrl = input.baseUrl.trim().replace(/\/$/, "");
+  if (input.inboxId !== undefined) updates.inboxId = input.inboxId?.trim() || null;
+  if (input.label !== undefined) updates.label = input.label?.trim() || null;
+  if (input.apiToken !== undefined) {
+    updates.apiTokenEncrypted = input.apiToken?.trim()
+      ? encryptSecretForStorage(input.apiToken.trim(), "updateChatwootAccount:apiToken")
+      : null;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return {
+      id: current.id,
+      tenantId: current.tenantId,
+      externalId: current.externalId,
+      baseUrl: current.baseUrl,
+      inboxId: current.inboxId,
+      label: current.label,
+    };
+  }
+
+  const [updated] = await db
+    .update(chatwootAccounts)
+    .set(updates as Partial<typeof chatwootAccounts.$inferInsert>)
+    .where(eq(chatwootAccounts.id, current.id))
+    .returning({
+      id: chatwootAccounts.id,
+      tenantId: chatwootAccounts.tenantId,
+      externalId: chatwootAccounts.externalId,
+      baseUrl: chatwootAccounts.baseUrl,
+      inboxId: chatwootAccounts.inboxId,
+      label: chatwootAccounts.label,
+    });
+  if (!updated) return { error: "not_found" };
+
+  await recordTenantActivity({
+    tenantId: updated.tenantId,
+    actorUserId: input.actorUserId ?? null,
+    scope: "integrations",
+    action: "update",
+    notificationType: "integration_updated",
+    title: "Integração Chatwoot atualizada",
+    message: `Conta ${updated.label?.trim() || updated.externalId} foi atualizada.`,
+    resourceType: "integration_chatwoot",
+    resourceId: updated.id,
+    oldValues: {
+      externalId: current.externalId,
+      baseUrl: current.baseUrl,
+      inboxId: current.inboxId,
+      label: current.label,
+    },
+    newValues: {
+      externalId: updated.externalId,
+      baseUrl: updated.baseUrl,
+      inboxId: updated.inboxId,
+      label: updated.label,
+    },
+    metadata: { provider: "chatwoot", integrationId: updated.id },
+  });
+  return updated;
+}
+
+// ============================================================================
+// WhatsApp Cloud
+// ============================================================================
+
+export async function getWhatsappCloudNumberById(
+  id: string
+): Promise<
+  | {
+      id: string;
+      tenantId: string;
+      phoneNumberId: string;
+      wabaId: string;
+      displayPhone: string | null;
+      label: string | null;
+      webhookVerifyToken: string | null;
+      hasAccessToken: boolean;
+    }
+  | IntegrationNotFound
+> {
+  const db = getDb();
+  const [row] = await db
+    .select({
+      id: whatsappCloudNumbers.id,
+      tenantId: whatsappCloudNumbers.tenantId,
+      phoneNumberId: whatsappCloudNumbers.phoneNumberId,
+      wabaId: whatsappCloudNumbers.wabaId,
+      displayPhone: whatsappCloudNumbers.displayPhone,
+      label: whatsappCloudNumbers.label,
+      webhookVerifyToken: whatsappCloudNumbers.webhookVerifyToken,
+      accessTokenEncrypted: whatsappCloudNumbers.accessTokenEncrypted,
+    })
+    .from(whatsappCloudNumbers)
+    .where(eq(whatsappCloudNumbers.id, id))
+    .limit(1);
+  if (!row) return { error: "not_found" };
+  return {
+    id: row.id,
+    tenantId: row.tenantId,
+    phoneNumberId: row.phoneNumberId,
+    wabaId: row.wabaId,
+    displayPhone: row.displayPhone,
+    label: row.label,
+    webhookVerifyToken: row.webhookVerifyToken,
+    hasAccessToken: Boolean(row.accessTokenEncrypted),
+  };
+}
+
+export async function updateWhatsappCloudNumberById(input: {
+  id: string;
+  phoneNumberId?: string;
+  wabaId?: string;
+  displayPhone?: string | null;
+  label?: string | null;
+  webhookVerifyToken?: string | null;
+  /** string vazia = remover; undefined = manter. */
+  accessToken?: string | null;
+  actorUserId?: string | null;
+}): Promise<
+  | {
+      id: string;
+      tenantId: string;
+      phoneNumberId: string;
+      wabaId: string;
+      displayPhone: string | null;
+      label: string | null;
+    }
+  | IntegrationNotFound
+  | IntegrationDuplicate
+> {
+  const db = getDb();
+  const [current] = await db
+    .select({
+      id: whatsappCloudNumbers.id,
+      tenantId: whatsappCloudNumbers.tenantId,
+      phoneNumberId: whatsappCloudNumbers.phoneNumberId,
+      wabaId: whatsappCloudNumbers.wabaId,
+      displayPhone: whatsappCloudNumbers.displayPhone,
+      label: whatsappCloudNumbers.label,
+    })
+    .from(whatsappCloudNumbers)
+    .where(eq(whatsappCloudNumbers.id, input.id))
+    .limit(1);
+  if (!current) return { error: "not_found" };
+
+  if (
+    input.phoneNumberId !== undefined &&
+    input.phoneNumberId.trim() !== current.phoneNumberId
+  ) {
+    const [conflict] = await db
+      .select({ id: whatsappCloudNumbers.id })
+      .from(whatsappCloudNumbers)
+      .where(
+        and(
+          eq(whatsappCloudNumbers.tenantId, current.tenantId),
+          eq(whatsappCloudNumbers.phoneNumberId, input.phoneNumberId.trim()),
+          ne(whatsappCloudNumbers.id, current.id)
+        )
+      )
+      .limit(1);
+    if (conflict) return { error: "duplicate_external_id" };
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (input.phoneNumberId !== undefined) updates.phoneNumberId = input.phoneNumberId.trim();
+  if (input.wabaId !== undefined) updates.wabaId = input.wabaId.trim();
+  if (input.displayPhone !== undefined) updates.displayPhone = input.displayPhone?.trim() || null;
+  if (input.label !== undefined) updates.label = input.label?.trim() || null;
+  if (input.webhookVerifyToken !== undefined) {
+    updates.webhookVerifyToken = input.webhookVerifyToken?.trim() || null;
+  }
+  if (input.accessToken !== undefined) {
+    updates.accessTokenEncrypted = input.accessToken?.trim()
+      ? encryptSecretForStorage(input.accessToken.trim(), "updateWhatsappCloudNumber:accessToken")
+      : null;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return {
+      id: current.id,
+      tenantId: current.tenantId,
+      phoneNumberId: current.phoneNumberId,
+      wabaId: current.wabaId,
+      displayPhone: current.displayPhone,
+      label: current.label,
+    };
+  }
+
+  const [updated] = await db
+    .update(whatsappCloudNumbers)
+    .set(updates as Partial<typeof whatsappCloudNumbers.$inferInsert>)
+    .where(eq(whatsappCloudNumbers.id, current.id))
+    .returning({
+      id: whatsappCloudNumbers.id,
+      tenantId: whatsappCloudNumbers.tenantId,
+      phoneNumberId: whatsappCloudNumbers.phoneNumberId,
+      wabaId: whatsappCloudNumbers.wabaId,
+      displayPhone: whatsappCloudNumbers.displayPhone,
+      label: whatsappCloudNumbers.label,
+    });
+  if (!updated) return { error: "not_found" };
+
+  await recordTenantActivity({
+    tenantId: updated.tenantId,
+    actorUserId: input.actorUserId ?? null,
+    scope: "integrations",
+    action: "update",
+    notificationType: "integration_updated",
+    title: "Integração WhatsApp Cloud atualizada",
+    message: `Número ${updated.label?.trim() || updated.displayPhone?.trim() || updated.phoneNumberId} foi atualizado.`,
+    resourceType: "integration_whatsapp_cloud",
+    resourceId: updated.id,
+    oldValues: {
+      phoneNumberId: current.phoneNumberId,
+      wabaId: current.wabaId,
+      displayPhone: current.displayPhone,
+      label: current.label,
+    },
+    newValues: {
+      phoneNumberId: updated.phoneNumberId,
+      wabaId: updated.wabaId,
+      displayPhone: updated.displayPhone,
+      label: updated.label,
+    },
+    metadata: { provider: "whatsapp_cloud", integrationId: updated.id },
   });
   return updated;
 }

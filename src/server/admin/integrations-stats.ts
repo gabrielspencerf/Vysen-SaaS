@@ -8,6 +8,8 @@ import {
   evolutionInstances,
   uazapiInstances,
   googleAdsAccounts,
+  chatwootAccounts,
+  whatsappCloudNumbers,
   tenants,
 } from "@/db/schema";
 
@@ -16,11 +18,20 @@ export type IntegrationStats = {
   evolutionInstances: number;
   uazapiInstances: number;
   googleAdsAccounts: number;
+  chatwootAccounts: number;
+  whatsappCloudNumbers: number;
 };
 
 export async function getIntegrationStats(tenantId?: string): Promise<IntegrationStats> {
   const db = getDb();
-  const [typebotRows, evolutionRows, googleAdsRows, uazapiRows] = await Promise.all([
+  const [
+    typebotRows,
+    evolutionRows,
+    googleAdsRows,
+    uazapiRows,
+    chatwootRows,
+    whatsappCloudRows,
+  ] = await Promise.all([
     db
       .select({ value: sql<number>`count(*)::int` })
       .from(typebotBots)
@@ -37,17 +48,23 @@ export async function getIntegrationStats(tenantId?: string): Promise<Integratio
       .select({ value: sql<number>`count(*)::int` })
       .from(uazapiInstances)
       .where(tenantId ? eq(uazapiInstances.tenantId, tenantId) : undefined),
+    db
+      .select({ value: sql<number>`count(*)::int` })
+      .from(chatwootAccounts)
+      .where(tenantId ? eq(chatwootAccounts.tenantId, tenantId) : undefined),
+    db
+      .select({ value: sql<number>`count(*)::int` })
+      .from(whatsappCloudNumbers)
+      .where(tenantId ? eq(whatsappCloudNumbers.tenantId, tenantId) : undefined),
   ]);
-  const typebot = typebotRows[0]?.value ?? 0;
-  const evolution = evolutionRows[0]?.value ?? 0;
-  const googleAds = googleAdsRows[0]?.value ?? 0;
-  const uazapi = uazapiRows[0]?.value ?? 0;
 
   return {
-    typebotBots: typebot,
-    evolutionInstances: evolution,
-    uazapiInstances: uazapi,
-    googleAdsAccounts: googleAds,
+    typebotBots: typebotRows[0]?.value ?? 0,
+    evolutionInstances: evolutionRows[0]?.value ?? 0,
+    uazapiInstances: uazapiRows[0]?.value ?? 0,
+    googleAdsAccounts: googleAdsRows[0]?.value ?? 0,
+    chatwootAccounts: chatwootRows[0]?.value ?? 0,
+    whatsappCloudNumbers: whatsappCloudRows[0]?.value ?? 0,
   };
 }
 
@@ -183,5 +200,83 @@ export async function listGoogleAdsAccounts(tenantId?: string): Promise<GoogleAd
     externalId: row.externalId,
     label: row.label,
     currencyCode: row.currencyCode,
+  }));
+}
+
+export type ChatwootAccountRow = {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  externalId: string;
+  baseUrl: string;
+  inboxId: string | null;
+  label: string | null;
+};
+
+export async function listChatwootAccounts(tenantId?: string): Promise<ChatwootAccountRow[]> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      id: chatwootAccounts.id,
+      tenantId: chatwootAccounts.tenantId,
+      tenantName: tenants.name,
+      externalId: chatwootAccounts.externalId,
+      baseUrl: chatwootAccounts.baseUrl,
+      inboxId: chatwootAccounts.inboxId,
+      label: chatwootAccounts.label,
+    })
+    .from(chatwootAccounts)
+    .innerJoin(tenants, eq(chatwootAccounts.tenantId, tenants.id))
+    .where(tenantId ? eq(chatwootAccounts.tenantId, tenantId) : undefined)
+    .orderBy(desc(chatwootAccounts.createdAt));
+
+  return rows.map((r) => ({
+    id: r.id,
+    tenantId: r.tenantId,
+    tenantName: r.tenantName,
+    externalId: r.externalId,
+    baseUrl: r.baseUrl,
+    inboxId: r.inboxId,
+    label: r.label,
+  }));
+}
+
+export type WhatsappCloudNumberRow = {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  phoneNumberId: string;
+  wabaId: string;
+  displayPhone: string | null;
+  label: string | null;
+};
+
+export async function listWhatsappCloudNumbers(
+  tenantId?: string
+): Promise<WhatsappCloudNumberRow[]> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      id: whatsappCloudNumbers.id,
+      tenantId: whatsappCloudNumbers.tenantId,
+      tenantName: tenants.name,
+      phoneNumberId: whatsappCloudNumbers.phoneNumberId,
+      wabaId: whatsappCloudNumbers.wabaId,
+      displayPhone: whatsappCloudNumbers.displayPhone,
+      label: whatsappCloudNumbers.label,
+    })
+    .from(whatsappCloudNumbers)
+    .innerJoin(tenants, eq(whatsappCloudNumbers.tenantId, tenants.id))
+    .where(tenantId ? eq(whatsappCloudNumbers.tenantId, tenantId) : undefined)
+    .orderBy(desc(whatsappCloudNumbers.createdAt));
+
+  return rows.map((r) => ({
+    id: r.id,
+    tenantId: r.tenantId,
+    tenantName: r.tenantName,
+    phoneNumberId: r.phoneNumberId,
+    wabaId: r.wabaId,
+    displayPhone: r.displayPhone,
+    label: r.label,
   }));
 }

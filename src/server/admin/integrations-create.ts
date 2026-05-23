@@ -2,7 +2,14 @@
  * Criar Typebot bot e Evolution instance (admin). Chamador deve usar requireAdmin.
  */
 import { getDb } from "@/server/db";
-import { typebotBots, evolutionInstances, integrations, uazapiInstances } from "@/db/schema";
+import {
+  typebotBots,
+  evolutionInstances,
+  integrations,
+  uazapiInstances,
+  chatwootAccounts,
+  whatsappCloudNumbers,
+} from "@/db/schema";
 import { hashWebhookSecret } from "@/server/integrations/webhook-secret";
 import { encryptSecretForStorage } from "@/server/security/secret-storage";
 import { normalizeUazapiCredential } from "@/lib/uazapi-credentials";
@@ -29,7 +36,7 @@ function toLegacyCredentialString(input: {
 
 async function ensureIntegrationRecord(args: {
   tenantId: string;
-  provider: "typebot" | "evolution" | "uazapi";
+  provider: "typebot" | "evolution" | "uazapi" | "chatwoot" | "whatsapp_cloud";
   name: string;
   providerResourceId: string;
 }) {
@@ -348,6 +355,175 @@ export async function createUazapiInstance(input: CreateUazapiInstanceInput) {
     const msg = err instanceof Error ? err.message : "";
     if (msg.includes("unique") || msg.includes("duplicate")) {
       return { error: "Já existe uma instância UAZAPI com este tenant e external_id" };
+    }
+    throw err;
+  }
+}
+
+// ============================================================================
+// Chatwoot
+// ============================================================================
+
+export interface CreateChatwootAccountInput {
+  tenantId: string;
+  externalId: string;
+  baseUrl: string;
+  inboxId?: string | null;
+  apiToken?: string | null;
+  label?: string | null;
+  actorUserId?: string | null;
+}
+
+export async function createChatwootAccount(input: CreateChatwootAccountInput) {
+  const db = getDb();
+  const baseUrl = input.baseUrl.trim().replace(/\/$/, "");
+  const apiTokenEncrypted = input.apiToken?.trim()
+    ? encryptSecretForStorage(input.apiToken.trim(), "createChatwootAccount:apiToken")
+    : null;
+
+  try {
+    const [row] = await db
+      .insert(chatwootAccounts)
+      .values({
+        tenantId: input.tenantId,
+        externalId: input.externalId.trim(),
+        baseUrl,
+        inboxId: input.inboxId?.trim() || null,
+        apiTokenEncrypted,
+        label: input.label?.trim() || null,
+      })
+      .returning({
+        id: chatwootAccounts.id,
+        tenantId: chatwootAccounts.tenantId,
+        externalId: chatwootAccounts.externalId,
+        baseUrl: chatwootAccounts.baseUrl,
+        inboxId: chatwootAccounts.inboxId,
+        label: chatwootAccounts.label,
+      });
+    if (!row) return { error: "Falha ao criar account Chatwoot" };
+
+    await ensureIntegrationRecord({
+      tenantId: row.tenantId,
+      provider: "chatwoot",
+      name: row.label?.trim() || row.externalId,
+      providerResourceId: row.id,
+    });
+    await recordTenantActivity({
+      tenantId: row.tenantId,
+      actorUserId: input.actorUserId ?? null,
+      scope: "integrations",
+      action: "create",
+      notificationType: "integration_created",
+      title: "Integração Chatwoot criada",
+      message: `Conta ${row.label?.trim() || row.externalId} foi conectada.`,
+      resourceType: "integration_chatwoot",
+      resourceId: row.id,
+      newValues: {
+        externalId: row.externalId,
+        baseUrl: row.baseUrl,
+        inboxId: row.inboxId,
+        label: row.label,
+      },
+      metadata: { provider: "chatwoot", integrationId: row.id },
+    });
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      externalId: row.externalId,
+      baseUrl: row.baseUrl,
+      inboxId: row.inboxId,
+      label: row.label,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "";
+    if (msg.includes("unique") || msg.includes("duplicate")) {
+      return { error: "Já existe uma conta Chatwoot com este tenant e external_id" };
+    }
+    throw err;
+  }
+}
+
+// ============================================================================
+// WhatsApp Cloud
+// ============================================================================
+
+export interface CreateWhatsappCloudNumberInput {
+  tenantId: string;
+  phoneNumberId: string;
+  wabaId: string;
+  displayPhone?: string | null;
+  accessToken?: string | null;
+  webhookVerifyToken?: string | null;
+  label?: string | null;
+  actorUserId?: string | null;
+}
+
+export async function createWhatsappCloudNumber(input: CreateWhatsappCloudNumberInput) {
+  const db = getDb();
+  const accessTokenEncrypted = input.accessToken?.trim()
+    ? encryptSecretForStorage(input.accessToken.trim(), "createWhatsappCloudNumber:accessToken")
+    : null;
+
+  try {
+    const [row] = await db
+      .insert(whatsappCloudNumbers)
+      .values({
+        tenantId: input.tenantId,
+        phoneNumberId: input.phoneNumberId.trim(),
+        wabaId: input.wabaId.trim(),
+        displayPhone: input.displayPhone?.trim() || null,
+        accessTokenEncrypted,
+        webhookVerifyToken: input.webhookVerifyToken?.trim() || null,
+        label: input.label?.trim() || null,
+      })
+      .returning({
+        id: whatsappCloudNumbers.id,
+        tenantId: whatsappCloudNumbers.tenantId,
+        phoneNumberId: whatsappCloudNumbers.phoneNumberId,
+        wabaId: whatsappCloudNumbers.wabaId,
+        displayPhone: whatsappCloudNumbers.displayPhone,
+        label: whatsappCloudNumbers.label,
+      });
+    if (!row) return { error: "Falha ao criar número WhatsApp Cloud" };
+
+    await ensureIntegrationRecord({
+      tenantId: row.tenantId,
+      provider: "whatsapp_cloud",
+      name: row.label?.trim() || row.displayPhone?.trim() || row.phoneNumberId,
+      providerResourceId: row.id,
+    });
+    await recordTenantActivity({
+      tenantId: row.tenantId,
+      actorUserId: input.actorUserId ?? null,
+      scope: "integrations",
+      action: "create",
+      notificationType: "integration_created",
+      title: "Integração WhatsApp Cloud criada",
+      message: `Número ${row.label?.trim() || row.displayPhone?.trim() || row.phoneNumberId} foi conectado.`,
+      resourceType: "integration_whatsapp_cloud",
+      resourceId: row.id,
+      newValues: {
+        phoneNumberId: row.phoneNumberId,
+        wabaId: row.wabaId,
+        displayPhone: row.displayPhone,
+        label: row.label,
+      },
+      metadata: { provider: "whatsapp_cloud", integrationId: row.id },
+    });
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      phoneNumberId: row.phoneNumberId,
+      wabaId: row.wabaId,
+      displayPhone: row.displayPhone,
+      label: row.label,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "";
+    if (msg.includes("unique") || msg.includes("duplicate")) {
+      return {
+        error: "Já existe um número WhatsApp Cloud com este tenant e phone_number_id",
+      };
     }
     throw err;
   }

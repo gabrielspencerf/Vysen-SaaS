@@ -5,7 +5,26 @@ import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui";
 
-type Provider = "evolution" | "typebot" | "uazapi";
+type Provider =
+  | "evolution"
+  | "typebot"
+  | "uazapi"
+  | "chatwoot"
+  | "whatsapp_cloud";
+
+const PROVIDER_META: Record<
+  Provider,
+  { label: string; pathSegment: string }
+> = {
+  evolution: { label: "instância Evolution", pathSegment: "evolution" },
+  typebot: { label: "bot Typebot", pathSegment: "typebot" },
+  uazapi: { label: "instância UAZAPI", pathSegment: "uazapi" },
+  chatwoot: { label: "conta Chatwoot", pathSegment: "chatwoot" },
+  whatsapp_cloud: {
+    label: "número WhatsApp Cloud",
+    pathSegment: "whatsapp-cloud",
+  },
+};
 
 export function IntegrationDeleteButton({
   id,
@@ -18,19 +37,9 @@ export function IntegrationDeleteButton({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const providerLabel =
-    provider === "evolution"
-      ? "instância Evolution"
-      : provider === "typebot"
-        ? "bot Typebot"
-        : "instância UAZAPI";
-
-  const path =
-    provider === "evolution"
-      ? `/api/admin/integrations/evolution/${id}`
-      : provider === "typebot"
-        ? `/api/admin/integrations/typebot/${id}`
-        : `/api/admin/integrations/uazapi/${id}`;
+  const meta = PROVIDER_META[provider];
+  const providerLabel = meta.label;
+  const path = `/api/admin/integrations/${meta.pathSegment}/${id}`;
 
   async function handleDelete() {
     if (
