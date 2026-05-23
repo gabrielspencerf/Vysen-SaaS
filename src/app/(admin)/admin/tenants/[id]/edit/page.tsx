@@ -6,6 +6,7 @@ import Link from "next/link";
 import { PageSection } from "@/components/layout/page-section";
 import { Input, Button, Card, CardContent } from "@/components/ui";
 import { adminGet, adminPatch } from "@/features/shared/api/admin-api-client";
+import { TenantSmtpSection } from "../tenant-smtp-section";
 
 interface TenantData {
   id: string;
@@ -428,6 +429,7 @@ export default function EditTenantPage() {
           </div>
           </CardContent>
         </Card>
+        <TenantSmtpSection tenantId={id} />
         <div className="sticky bottom-4 z-10 flex gap-3 rounded-xl border border-brand-border bg-brand-surface/95 p-3 backdrop-blur">
           <Button
             type="submit"

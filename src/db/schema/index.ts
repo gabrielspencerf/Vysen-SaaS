@@ -13,3 +13,4 @@ export * from "./conversations";
 export * from "./crm";
 export * from "./snapshots";
 export * from "./ai-alerts-audit";
+export * from "./tenancy";
