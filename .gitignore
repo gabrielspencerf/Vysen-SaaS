@@ -45,6 +45,26 @@ next-env.d.ts
 # Cursor debug logs (local)
 .cursor/debug*.log
 
+# Claude Code (local settings/cache)
+.claude/
+
+# Runtime dev/worker logs e pids (capturados por scripts de boot)
+tmp_app_dev*.log
+tmp_app_dev*.txt
+tmp_app_dev.pid
+tmp_worker_dev*.log
+tmp_worker_dev.pid
+
+# Capturas de UX (screenshots e frames de video gerados localmente)
+ux-all-prints/
+ux-screenshots/
+ux-video-frames/
+ux-video-frames-extra/
+ux-video-minute-marks/
+
+# Backups locais
+docs.zip
+
 # Misc
 .DS_Store
 *.pem
