@@ -197,6 +197,13 @@
       "when": 1748246400000,
       "tag": "0026_tenant_smtp_configs",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1748332800000,
+      "tag": "0027_vysen_chat_threads",
+      "breakpoints": true
     }
   ]
 }

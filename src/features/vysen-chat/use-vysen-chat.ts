@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { sendVysenChatMessage } from "@/features/vysen-chat/api/chat-client";
 import {
+  fetchVysenThreadsServer,
+  upsertVysenThreadServer,
+} from "@/features/vysen-chat/api/threads-client";
+import {
   MAX_THREADS,
   buildThreadTitle,
   createEmptyThread,
@@ -230,6 +234,65 @@ export function useVysenChat({
       // persistencia best-effort
     }
   }, [threads, activeThreadId, experienceStarted, resolvedStorageKey]);
+
+  // Server sync — só ativa quando há tenantId (sessão autenticada).
+  const serverHydratedRef = useRef(false);
+  const syncedThreadsRef = useRef<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    if (!tenantId || serverHydratedRef.current) return;
+    let cancelled = false;
+    (async () => {
+      const serverThreads = await fetchVysenThreadsServer();
+      if (cancelled) return;
+      if (serverThreads.length > 0) {
+        const hydrated = serverThreads
+          .map(
+            (row): VysenChatThread => ({
+              id: row.id,
+              title: row.title,
+              createdAt: row.createdAt,
+              updatedAt: row.updatedAt,
+              contextArea: row.contextArea as VysenContextArea,
+              contexts: row.contexts ?? [],
+              summary: row.summary || "Sem resumo ainda.",
+              messages: row.messages ?? [],
+            })
+          )
+          .slice(0, MAX_THREADS);
+        setThreads(hydrated);
+        setActiveThreadId(hydrated[0].id);
+        setExperienceStarted(
+          serverThreads.some((t) => t.experienceStarted || t.messageCount > 0)
+        );
+        // Marca como sincronizadas pra evitar PUT redundante na próxima passada.
+        for (const t of serverThreads) {
+          syncedThreadsRef.current.set(t.id, t.updatedAt);
+        }
+      }
+      serverHydratedRef.current = true;
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
+
+  // Após hidratar (ou imediatamente se não há tenant), sincroniza
+  // mudanças locais via debounce — best-effort, falha não bloqueia UI.
+  useEffect(() => {
+    if (!tenantId || !serverHydratedRef.current || threads.length === 0) return;
+    const synced = syncedThreadsRef.current;
+    const dirty = threads.filter((t) => synced.get(t.id) !== t.updatedAt);
+    if (dirty.length === 0) return;
+    const handle = window.setTimeout(() => {
+      for (const t of dirty) {
+        upsertVysenThreadServer(t, experienceStarted).then((row) => {
+          if (row) synced.set(row.id, row.updatedAt);
+        });
+      }
+    }, 600);
+    return () => window.clearTimeout(handle);
+  }, [threads, experienceStarted, tenantId]);
 
   const startExperience = useCallback(() => {
     setExperienceStarted(true);
