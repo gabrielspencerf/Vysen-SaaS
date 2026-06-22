@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, CheckCircle2, Circle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui";
@@ -94,6 +94,18 @@ export function DashboardFirstAccessGuide({
     return () => window.removeEventListener(GUIDE_OPEN_EVENT, onOpen);
   }, []);
 
+  const dismissGuide = useCallback(() => {
+    try {
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({ status: "dismissed", dismissedAt: Date.now() })
+      );
+    } catch {
+      // melhor esforço
+    }
+    setOpen(false);
+  }, [storageKey]);
+
   useEffect(() => {
     if (!open) return;
     const onEscape = (event: KeyboardEvent) => {
@@ -111,18 +123,6 @@ export function DashboardFirstAccessGuide({
       localStorage.setItem(
         storageKey,
         JSON.stringify({ status: "released", releasedAt: Date.now() })
-      );
-    } catch {
-      // melhor esforço
-    }
-    setOpen(false);
-  }
-
-  function dismissGuide() {
-    try {
-      localStorage.setItem(
-        storageKey,
-        JSON.stringify({ status: "dismissed", dismissedAt: Date.now() })
       );
     } catch {
       // melhor esforço

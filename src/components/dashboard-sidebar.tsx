@@ -146,6 +146,7 @@ export function DashboardSidebar({
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-brand-border bg-brand-surface text-sm font-semibold text-brand-text shadow-sm">
                 {resolvedAvatarUrl && !avatarBroken ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={resolvedAvatarUrl}
                     alt={`Avatar de ${userDisplayName}`}

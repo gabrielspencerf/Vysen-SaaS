@@ -428,7 +428,7 @@ export function useVysenChat({
         inFlightRef.current = false;
       }
     },
-    [endpoint, tenantId, activeThreadId, threads]
+    [endpoint, activeThreadId, threads]
   );
 
   return {

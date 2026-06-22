@@ -238,12 +238,14 @@ export default async function DashboardConversationDetailPage({
                         )}
                         {m.contentType === "image" && (
                           <div className="mb-1.5 flex items-center gap-1.5 text-[11px] text-brand-muted">
+                            {/* eslint-disable-next-line jsx-a11y/alt-text */}
                             <Image className="h-3.5 w-3.5" aria-hidden />
                             Imagem
                             {m.contentText ? <span>· descrição</span> : null}
                           </div>
                         )}
                         {m.contentType === "image" && imageSourceUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={imageSourceUrl}
                             alt="Mídia enviada na conversa"

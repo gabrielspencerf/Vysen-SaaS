@@ -109,6 +109,7 @@ export function ProfileAvatarSection({
         <div className="mt-4 flex flex-wrap items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-brand-border bg-brand-surface/70 text-lg font-semibold text-brand-text">
             {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img src={avatarUrl} alt={`Avatar de ${displayName || email}`} className="h-full w-full object-cover" />
             ) : (
               initials

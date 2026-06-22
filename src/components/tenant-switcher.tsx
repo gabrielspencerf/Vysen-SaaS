@@ -85,7 +85,7 @@ export function TenantSwitcher({
             role="listbox"
           >
             {others.map((t) => (
-              <li key={t.id} role="option">
+              <li key={t.id} role="option" aria-selected={false}>
                 <button
                   type="button"
                   onClick={() => switchTo(t.id)}
