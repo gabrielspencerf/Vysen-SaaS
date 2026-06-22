@@ -2,7 +2,7 @@
  * POST /api/dashboard/funnels/[id]/steps — adiciona etapa ao funil (body: name).
  */
 import { NextRequest, NextResponse } from "next/server";
-import { requireDashboardApiAuth } from "@/server/dashboard/api-auth";
+import { withDashboardApiAuth } from "@/server/dashboard/api-auth";
 import { dashboardApiAuthErrorResponse } from "@/server/dashboard/api-route-errors";
 import { PERMISSION_SLUGS } from "@/server/rbac";
 import { createFunnelStepForTenant } from "@/server/dashboard";
@@ -11,21 +11,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  let session;
-  try {
-    session = await requireDashboardApiAuth(request, PERMISSION_SLUGS.FUNNELS_WRITE);
-  } catch (err) {
-    return dashboardApiAuthErrorResponse(err);
-  }
-
-  const tenantId = session.session.currentTenantId!;
-
   const { id: funnelId } = await params;
   if (!funnelId) {
-    return NextResponse.json(
-      { error: "ID do funil é obrigatório" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "ID do funil é obrigatório" }, { status: 400 });
   }
 
   let body: Record<string, unknown>;
@@ -37,18 +25,22 @@ export async function POST(
 
   const name = typeof body.name === "string" ? body.name.trim() : "";
   if (!name) {
-    return NextResponse.json(
-      { error: "Nome da etapa é obrigatório" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Nome da etapa é obrigatório" }, { status: 400 });
   }
 
-  const result = await createFunnelStepForTenant(tenantId, funnelId, { name });
-  if ("error" in result) {
-    return NextResponse.json(
-      { error: result.error },
-      { status: result.error === "Funil não encontrado" ? 404 : 400 }
-    );
+  try {
+    return await withDashboardApiAuth(request, async (session) => {
+      const tenantId = session.session.currentTenantId!;
+      const result = await createFunnelStepForTenant(tenantId, funnelId, { name });
+      if ("error" in result) {
+        return NextResponse.json(
+          { error: result.error },
+          { status: result.error === "Funil não encontrado" ? 404 : 400 }
+        );
+      }
+      return NextResponse.json({ ok: true, id: result.id });
+    }, PERMISSION_SLUGS.FUNNELS_WRITE);
+  } catch (err) {
+    return dashboardApiAuthErrorResponse(err);
   }
-  return NextResponse.json({ ok: true, id: result.id });
 }

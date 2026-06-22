@@ -1,34 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireDashboardApiAuth } from "@/server/dashboard/api-auth";
+import { withDashboardApiAuth } from "@/server/dashboard/api-auth";
 import { dashboardApiAuthErrorResponse } from "@/server/dashboard/api-route-errors";
 import { PERMISSION_SLUGS } from "@/server/rbac";
 import { createComplaintForTenant, listComplaintsForTenant } from "@/server/dashboard";
 
 export async function GET(request: NextRequest) {
-  let session;
   try {
-    session = await requireDashboardApiAuth(request, PERMISSION_SLUGS.DASHBOARD_READ);
+    return await withDashboardApiAuth(request, async (session) => {
+      const tenantId = session.session.currentTenantId!;
+      const list = await listComplaintsForTenant(tenantId);
+      return NextResponse.json(list);
+    }, PERMISSION_SLUGS.DASHBOARD_READ);
   } catch (err) {
     return dashboardApiAuthErrorResponse(err);
   }
-
-  const tenantId = session.session.currentTenantId!;
-
-  const list = await listComplaintsForTenant(tenantId);
-  return NextResponse.json(list);
 }
 
 export async function POST(request: NextRequest) {
-  let session;
-  try {
-    session = await requireDashboardApiAuth(request, PERMISSION_SLUGS.DASHBOARD_READ);
-  } catch (err) {
-    return dashboardApiAuthErrorResponse(err);
-  }
-
-  const tenantId = session.session.currentTenantId!;
-  const userId = session.user.id;
-
   let body: Record<string, unknown>;
   try {
     body = await request.json();
@@ -36,17 +24,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Corpo invalido" }, { status: 400 });
   }
 
-  const subject = typeof body.subject === "string" ? body.subject : undefined;
-  const bodyText = typeof body.body === "string" ? body.body : "";
+  try {
+    return await withDashboardApiAuth(request, async (session) => {
+      const tenantId = session.session.currentTenantId!;
+      const userId = session.user.id;
 
-  const result = await createComplaintForTenant(tenantId, userId, {
-    subject,
-    body: bodyText,
-  });
+      const subject = typeof body.subject === "string" ? body.subject : undefined;
+      const bodyText = typeof body.body === "string" ? body.body : "";
 
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: 400 });
+      const result = await createComplaintForTenant(tenantId, userId, {
+        subject,
+        body: bodyText,
+      });
+
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: 400 });
+      }
+
+      return NextResponse.json({ ok: true, id: result.id });
+    }, PERMISSION_SLUGS.DASHBOARD_READ);
+  } catch (err) {
+    return dashboardApiAuthErrorResponse(err);
   }
-
-  return NextResponse.json({ ok: true, id: result.id });
 }

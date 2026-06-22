@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireDashboardApiAuth } from "@/server/dashboard/api-auth";
+import { NextRequest } from "next/server";
+import { withDashboardApiAuth } from "@/server/dashboard/api-auth";
 import { dashboardApiAuthErrorResponse } from "@/server/dashboard/api-route-errors";
 import { PERMISSION_SLUGS } from "@/server/rbac";
 import { apiError, apiOk } from "@/server/http/api-contract";
@@ -68,45 +68,33 @@ function isMissingAgentNotificationsSchema(
 }
 
 export async function GET(request: NextRequest) {
-  let session;
   try {
-    session = await requireDashboardApiAuth(request, PERMISSION_SLUGS.DASHBOARD_READ);
+    return await withDashboardApiAuth(request, async (session) => {
+      const tenantId = session.session.currentTenantId!;
+      try {
+        const notifications = await listInternalNotificationsForUser({
+          tenantId,
+          userId: session.user.id,
+          limit: 100,
+        });
+        return apiOk({ notifications });
+      } catch (e) {
+        const pgCode = pickPgCodeDeep(e);
+        const fullMessage = collectErrorMessages(e);
+        if (isMissingAgentNotificationsSchema(pgCode, fullMessage)) {
+          return apiError("schema_missing", NOTIFICATIONS_SCHEMA_HINT, { status: 503 });
+        }
+        return apiError("notifications_list_failed", "Erro interno ao listar notificações.", {
+          status: 500,
+        });
+      }
+    }, PERMISSION_SLUGS.DASHBOARD_READ);
   } catch (err) {
     return dashboardApiAuthErrorResponse(err);
-  }
-  const tenantId = session.session.currentTenantId!;
-
-  try {
-    const notifications = await listInternalNotificationsForUser({
-      tenantId,
-      userId: session.user.id,
-      limit: 100,
-    });
-
-    return apiOk({ notifications });
-  } catch (e) {
-    const pgCode = pickPgCodeDeep(e);
-    const fullMessage = collectErrorMessages(e);
-
-    if (isMissingAgentNotificationsSchema(pgCode, fullMessage)) {
-      return apiError("schema_missing", NOTIFICATIONS_SCHEMA_HINT, { status: 503 });
-    }
-
-    return apiError("notifications_list_failed", "Erro interno ao listar notificações.", {
-      status: 500,
-    });
   }
 }
 
 export async function PATCH(request: NextRequest) {
-  let session;
-  try {
-    session = await requireDashboardApiAuth(request, PERMISSION_SLUGS.DASHBOARD_READ);
-  } catch (err) {
-    return dashboardApiAuthErrorResponse(err);
-  }
-  const tenantId = session.session.currentTenantId!;
-
   let body: { ids?: string[] };
   try {
     body = await request.json();
@@ -114,28 +102,34 @@ export async function PATCH(request: NextRequest) {
     return apiError("invalid_body", "Corpo inválido", { status: 400 });
   }
 
-  const ids = Array.isArray(body.ids)
-    ? body.ids.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
-    : [];
-
   try {
-    await markInternalNotificationsAsRead({
-      tenantId,
-      userId: session.user.id,
-      ids,
-    });
-  } catch (e) {
-    const pgCode = pickPgCodeDeep(e);
-    const fullMessage = collectErrorMessages(e);
+    return await withDashboardApiAuth(request, async (session) => {
+      const tenantId = session.session.currentTenantId!;
 
-    if (isMissingAgentNotificationsSchema(pgCode, fullMessage)) {
-      return apiError("schema_missing", NOTIFICATIONS_SCHEMA_HINT, { status: 503 });
-    }
+      const ids = Array.isArray(body.ids)
+        ? body.ids.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+        : [];
 
-    return apiError("notifications_update_failed", "Erro interno ao atualizar notificações.", {
-      status: 500,
-    });
+      try {
+        await markInternalNotificationsAsRead({
+          tenantId,
+          userId: session.user.id,
+          ids,
+        });
+      } catch (e) {
+        const pgCode = pickPgCodeDeep(e);
+        const fullMessage = collectErrorMessages(e);
+        if (isMissingAgentNotificationsSchema(pgCode, fullMessage)) {
+          return apiError("schema_missing", NOTIFICATIONS_SCHEMA_HINT, { status: 503 });
+        }
+        return apiError("notifications_update_failed", "Erro interno ao atualizar notificações.", {
+          status: 500,
+        });
+      }
+
+      return apiOk({ acknowledged: true });
+    }, PERMISSION_SLUGS.DASHBOARD_READ);
+  } catch (err) {
+    return dashboardApiAuthErrorResponse(err);
   }
-
-  return apiOk({ acknowledged: true });
 }

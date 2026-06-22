@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireDashboardApiAuth } from "@/server/dashboard/api-auth";
+import { withDashboardApiAuth } from "@/server/dashboard/api-auth";
 import { dashboardApiAuthErrorResponse } from "@/server/dashboard/api-route-errors";
 import { PERMISSION_SLUGS } from "@/server/rbac";
 import { buildGoogleOfflinePreviewForTenant } from "@/server/dashboard/google-ads-offline-conversions";
@@ -8,15 +8,6 @@ const MAX_LIMIT = 50;
 const DEFAULT_LIMIT = 15;
 
 export async function GET(request: NextRequest) {
-  let session;
-  try {
-    session = await requireDashboardApiAuth(request, PERMISSION_SLUGS.LEADS_READ);
-  } catch (err) {
-    return dashboardApiAuthErrorResponse(err);
-  }
-
-  const tenantId = session.session.currentTenantId!;
-
   const { searchParams } = new URL(request.url);
   const parsedLimit = Number(searchParams.get("limit"));
   const limit = Number.isFinite(parsedLimit)
@@ -25,11 +16,17 @@ export async function GET(request: NextRequest) {
   const conversionName = searchParams.get("conversionName") ?? undefined;
   const currencyCode = searchParams.get("currencyCode") ?? undefined;
 
-  const preview = await buildGoogleOfflinePreviewForTenant(tenantId, {
-    limit,
-    conversionName,
-    currencyCode,
-  });
-
-  return NextResponse.json(preview);
+  try {
+    return await withDashboardApiAuth(request, async (session) => {
+      const tenantId = session.session.currentTenantId!;
+      const preview = await buildGoogleOfflinePreviewForTenant(tenantId, {
+        limit,
+        conversionName,
+        currencyCode,
+      });
+      return NextResponse.json(preview);
+    }, PERMISSION_SLUGS.LEADS_READ);
+  } catch (err) {
+    return dashboardApiAuthErrorResponse(err);
+  }
 }

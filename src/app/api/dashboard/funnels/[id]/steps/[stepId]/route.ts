@@ -3,7 +3,7 @@
  * DELETE /api/dashboard/funnels/[id]/steps/[stepId] — remove etapa.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { requireDashboardApiAuth } from "@/server/dashboard/api-auth";
+import { withDashboardApiAuth } from "@/server/dashboard/api-auth";
 import { dashboardApiAuthErrorResponse } from "@/server/dashboard/api-route-errors";
 import { PERMISSION_SLUGS } from "@/server/rbac";
 import {
@@ -15,15 +15,6 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; stepId: string }> }
 ) {
-  let session;
-  try {
-    session = await requireDashboardApiAuth(request, PERMISSION_SLUGS.FUNNELS_WRITE);
-  } catch (err) {
-    return dashboardApiAuthErrorResponse(err);
-  }
-
-  const tenantId = session.session.currentTenantId!;
-
   const { id: funnelId, stepId } = await params;
   if (!funnelId || !stepId) {
     return NextResponse.json(
@@ -39,37 +30,29 @@ export async function PATCH(
     return NextResponse.json({ error: "Corpo inválido" }, { status: 400 });
   }
 
-  const name = typeof body.name === "string" ? body.name : undefined;
-
-  const result = await updateFunnelStepForTenant(
-    tenantId,
-    funnelId,
-    stepId,
-    { name }
-  );
-  if ("error" in result) {
-    const status =
-      result.error === "Funil não encontrado" || result.error === "Etapa não encontrada"
-        ? 404
-        : 400;
-    return NextResponse.json({ error: result.error }, { status });
+  try {
+    return await withDashboardApiAuth(request, async (session) => {
+      const tenantId = session.session.currentTenantId!;
+      const name = typeof body.name === "string" ? body.name : undefined;
+      const result = await updateFunnelStepForTenant(tenantId, funnelId, stepId, { name });
+      if ("error" in result) {
+        const status =
+          result.error === "Funil não encontrado" || result.error === "Etapa não encontrada"
+            ? 404
+            : 400;
+        return NextResponse.json({ error: result.error }, { status });
+      }
+      return NextResponse.json({ ok: true });
+    }, PERMISSION_SLUGS.FUNNELS_WRITE);
+  } catch (err) {
+    return dashboardApiAuthErrorResponse(err);
   }
-  return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; stepId: string }> }
 ) {
-  let session;
-  try {
-    session = await requireDashboardApiAuth(request, PERMISSION_SLUGS.FUNNELS_WRITE);
-  } catch (err) {
-    return dashboardApiAuthErrorResponse(err);
-  }
-
-  const tenantId = session.session.currentTenantId!;
-
   const { id: funnelId, stepId } = await params;
   if (!funnelId || !stepId) {
     return NextResponse.json(
@@ -78,13 +61,20 @@ export async function DELETE(
     );
   }
 
-  const result = await deleteFunnelStepForTenant(tenantId, funnelId, stepId);
-  if ("error" in result) {
-    const status =
-      result.error === "Funil não encontrado" || result.error === "Etapa não encontrada"
-        ? 404
-        : 400;
-    return NextResponse.json({ error: result.error }, { status });
+  try {
+    return await withDashboardApiAuth(request, async (session) => {
+      const tenantId = session.session.currentTenantId!;
+      const result = await deleteFunnelStepForTenant(tenantId, funnelId, stepId);
+      if ("error" in result) {
+        const status =
+          result.error === "Funil não encontrado" || result.error === "Etapa não encontrada"
+            ? 404
+            : 400;
+        return NextResponse.json({ error: result.error }, { status });
+      }
+      return NextResponse.json({ ok: true });
+    }, PERMISSION_SLUGS.FUNNELS_WRITE);
+  } catch (err) {
+    return dashboardApiAuthErrorResponse(err);
   }
-  return NextResponse.json({ ok: true });
 }

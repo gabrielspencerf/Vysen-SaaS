@@ -3,7 +3,7 @@
  * POST /api/dashboard/products — cria produto (body: name, description?, unitPrice, currency?).
  */
 import { NextRequest, NextResponse } from "next/server";
-import { requireDashboardApiAuth } from "@/server/dashboard/api-auth";
+import { withDashboardApiAuth } from "@/server/dashboard/api-auth";
 import { dashboardApiAuthErrorResponse } from "@/server/dashboard/api-route-errors";
 import { PERMISSION_SLUGS } from "@/server/rbac";
 import {
@@ -13,31 +13,21 @@ import {
 import { recordTenantActivity } from "@/server/tenancy/tenant-activity";
 
 export async function GET(request: NextRequest) {
-  let session;
+  const { searchParams } = new URL(request.url);
+  const activeOnly = searchParams.get("activeOnly") === "true";
+
   try {
-    session = await requireDashboardApiAuth(request, PERMISSION_SLUGS.DASHBOARD_READ);
+    return await withDashboardApiAuth(request, async (session) => {
+      const tenantId = session.session.currentTenantId!;
+      const list = await listProductsForTenant(tenantId, { activeOnly });
+      return NextResponse.json(list);
+    }, PERMISSION_SLUGS.DASHBOARD_READ);
   } catch (err) {
     return dashboardApiAuthErrorResponse(err);
   }
-
-  const tenantId = session.session.currentTenantId!;
-
-  const { searchParams } = new URL(request.url);
-  const activeOnly = searchParams.get("activeOnly") === "true";
-  const list = await listProductsForTenant(tenantId, { activeOnly });
-  return NextResponse.json(list);
 }
 
 export async function POST(request: NextRequest) {
-  let session;
-  try {
-    session = await requireDashboardApiAuth(request, PERMISSION_SLUGS.LEADS_WRITE);
-  } catch (err) {
-    return dashboardApiAuthErrorResponse(err);
-  }
-
-  const tenantId = session.session.currentTenantId!;
-
   let body: Record<string, unknown>;
   try {
     body = await request.json();
@@ -74,41 +64,45 @@ export async function POST(request: NextRequest) {
         ? "monthly"
         : undefined;
 
-  const result = await createProductForTenant(tenantId, {
-    name,
-    description,
-    unitPrice,
-    currency,
-    billingType,
-    billingInterval: billingInterval ?? null,
-  });
+  try {
+    return await withDashboardApiAuth(request, async (session) => {
+      const tenantId = session.session.currentTenantId!;
+      const result = await createProductForTenant(tenantId, {
+        name,
+        description,
+        unitPrice,
+        currency,
+        billingType,
+        billingInterval: billingInterval ?? null,
+      });
 
-  if (!result.ok) {
-    return NextResponse.json(
-      { error: result.error },
-      { status: 400 }
-    );
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: 400 });
+      }
+      await recordTenantActivity({
+        tenantId,
+        actorUserId: session.user.id,
+        scope: "products_leads",
+        action: "create",
+        notificationType: "product_created",
+        title: "Produto criado",
+        message: `Produto "${name}" foi criado na conta.`,
+        resourceType: "product",
+        resourceId: result.id,
+        newValues: {
+          name,
+          unitPrice,
+          currency: currency ?? null,
+          billingType,
+          billingInterval: billingInterval ?? null,
+        },
+        metadata: {
+          productId: result.id,
+        },
+      });
+      return NextResponse.json({ ok: true, id: result.id });
+    }, PERMISSION_SLUGS.LEADS_WRITE);
+  } catch (err) {
+    return dashboardApiAuthErrorResponse(err);
   }
-  await recordTenantActivity({
-    tenantId,
-    actorUserId: session.user.id,
-    scope: "products_leads",
-    action: "create",
-    notificationType: "product_created",
-    title: "Produto criado",
-    message: `Produto "${name}" foi criado na conta.`,
-    resourceType: "product",
-    resourceId: result.id,
-    newValues: {
-      name,
-      unitPrice,
-      currency: currency ?? null,
-      billingType,
-      billingInterval: billingInterval ?? null,
-    },
-    metadata: {
-      productId: result.id,
-    },
-  });
-  return NextResponse.json({ ok: true, id: result.id });
 }

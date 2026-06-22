@@ -3,7 +3,7 @@
  * POST /api/dashboard/tenant-assets — upload (multipart: file, kind, displayName?).
  */
 import { NextRequest, NextResponse } from "next/server";
-import { requireDashboardApiAuth } from "@/server/dashboard/api-auth";
+import { withDashboardApiAuth } from "@/server/dashboard/api-auth";
 import { dashboardApiAuthErrorResponse } from "@/server/dashboard/api-route-errors";
 import { PERMISSION_SLUGS } from "@/server/rbac";
 import {
@@ -12,23 +12,22 @@ import {
 } from "@/server/dashboard";
 
 export async function GET(request: NextRequest) {
-  let session;
+  const { searchParams } = new URL(request.url);
+  const kind = searchParams.get("kind") ?? undefined;
+
   try {
-    session = await requireDashboardApiAuth(request, PERMISSION_SLUGS.DASHBOARD_READ);
+    return await withDashboardApiAuth(request, async (session) => {
+      const tenantId = session.session.currentTenantId!;
+      const list = await listTenantAssets(tenantId, { kind });
+      const serialized = list.map((a) => ({
+        ...a,
+        createdAt: a.createdAt.toISOString(),
+      }));
+      return NextResponse.json(serialized);
+    }, PERMISSION_SLUGS.DASHBOARD_READ);
   } catch (err) {
     return dashboardApiAuthErrorResponse(err);
   }
-
-  const tenantId = session.session.currentTenantId!;
-
-  const { searchParams } = new URL(request.url);
-  const kind = searchParams.get("kind") ?? undefined;
-  const list = await listTenantAssets(tenantId, { kind });
-  const serialized = list.map((a) => ({
-    ...a,
-    createdAt: a.createdAt.toISOString(),
-  }));
-  return NextResponse.json(serialized);
 }
 
 // Espelha limites da camada server (createTenantAsset). Validados na rota antes
@@ -43,15 +42,6 @@ const ALLOWED_TYPES = new Set([
 ]);
 
 export async function POST(request: NextRequest) {
-  let session;
-  try {
-    session = await requireDashboardApiAuth(request, PERMISSION_SLUGS.LEADS_WRITE);
-  } catch (err) {
-    return dashboardApiAuthErrorResponse(err);
-  }
-
-  const tenantId = session.session.currentTenantId!;
-
   // Reject early com base no Content-Length (multipart tem overhead, margem 64KB).
   const contentLength = Number(request.headers.get("content-length") ?? "0");
   if (Number.isFinite(contentLength) && contentLength > MAX_FILE_SIZE_BYTES + 64 * 1024) {
@@ -73,10 +63,7 @@ export async function POST(request: NextRequest) {
 
   const file = formData.get("file");
   if (!file || !(file instanceof File)) {
-    return NextResponse.json(
-      { error: "Campo 'file' é obrigatório." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Campo 'file' é obrigatório." }, { status: 400 });
   }
 
   if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -107,19 +94,23 @@ export async function POST(request: NextRequest) {
     ? formData.get("displayName") as string
     : file.name;
 
-  const result = await createTenantAsset(tenantId, {
-    kind: kindStr,
-    buffer,
-    contentType: file.type || "application/octet-stream",
-    originalName: displayName,
-    size: file.size,
-  });
+  try {
+    return await withDashboardApiAuth(request, async (session) => {
+      const tenantId = session.session.currentTenantId!;
+      const result = await createTenantAsset(tenantId, {
+        kind: kindStr,
+        buffer,
+        contentType: file.type || "application/octet-stream",
+        originalName: displayName,
+        size: file.size,
+      });
 
-  if (!result.ok) {
-    return NextResponse.json(
-      { error: result.error },
-      { status: 400 }
-    );
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: 400 });
+      }
+      return NextResponse.json({ ok: true, id: result.id });
+    }, PERMISSION_SLUGS.LEADS_WRITE);
+  } catch (err) {
+    return dashboardApiAuthErrorResponse(err);
   }
-  return NextResponse.json({ ok: true, id: result.id });
 }

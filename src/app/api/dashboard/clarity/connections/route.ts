@@ -1,19 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireDashboardApiAuth } from "@/server/dashboard/api-auth";
+import { withDashboardApiAuth } from "@/server/dashboard/api-auth";
 import { dashboardApiAuthErrorResponse } from "@/server/dashboard/api-route-errors";
 import { PERMISSION_SLUGS } from "@/server/rbac";
 import { createClarityConnection } from "@/server/integrations/clarity/accounts";
 
 export async function POST(request: NextRequest) {
-  let session;
-  try {
-    session = await requireDashboardApiAuth(request, PERMISSION_SLUGS.DASHBOARD_READ);
-  } catch (err) {
-    return dashboardApiAuthErrorResponse(err);
-  }
-
-  const tenantId = session.session.currentTenantId!;
-
   let apiToken: string | undefined;
   let label: string | undefined;
   try {
@@ -31,15 +22,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Corpo inválido" }, { status: 400 });
   }
 
-  const created = await createClarityConnection({
-    tenantId,
-    apiToken: apiToken ?? "",
-    label: label ?? null,
-  });
+  try {
+    return await withDashboardApiAuth(request, async (session) => {
+      const tenantId = session.session.currentTenantId!;
+      const created = await createClarityConnection({
+        tenantId,
+        apiToken: apiToken ?? "",
+        label: label ?? null,
+      });
 
-  if ("error" in created) {
-    return NextResponse.json({ error: created.error }, { status: 400 });
+      if ("error" in created) {
+        return NextResponse.json({ error: created.error }, { status: 400 });
+      }
+
+      return NextResponse.json({ ok: true, id: created.id });
+    }, PERMISSION_SLUGS.DASHBOARD_READ);
+  } catch (err) {
+    return dashboardApiAuthErrorResponse(err);
   }
-
-  return NextResponse.json({ ok: true, id: created.id });
 }

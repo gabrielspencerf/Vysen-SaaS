@@ -3,7 +3,7 @@
  * Resposta: { created, skipped, errors: { line, message }[] }
  */
 import { NextRequest, NextResponse } from "next/server";
-import { requireDashboardApiAuth } from "@/server/dashboard/api-auth";
+import { withDashboardApiAuth } from "@/server/dashboard/api-auth";
 import { dashboardApiAuthErrorResponse } from "@/server/dashboard/api-route-errors";
 import { PERMISSION_SLUGS } from "@/server/rbac";
 import {
@@ -31,15 +31,6 @@ function rowToCsvLead(headers: string[], values: string[]): CsvLeadRow {
 }
 
 export async function POST(request: NextRequest) {
-  let session;
-  try {
-    session = await requireDashboardApiAuth(request, PERMISSION_SLUGS.LEADS_WRITE);
-  } catch (err) {
-    return dashboardApiAuthErrorResponse(err);
-  }
-
-  const tenantId = session.session.currentTenantId!;
-
   // Reject early por Content-Length (multipart tem overhead pequeno, margem 64 KB).
   const contentLength = Number(request.headers.get("content-length") ?? "0");
   if (Number.isFinite(contentLength) && contentLength > MAX_FILE_SIZE + 64 * 1024) {
@@ -93,7 +84,14 @@ export async function POST(request: NextRequest) {
   }
 
   const csvRows: CsvLeadRow[] = rows.map((values) => rowToCsvLead(headers, values));
-  const result = await importLeadsFromCsv(tenantId, csvRows);
 
-  return NextResponse.json(result);
+  try {
+    return await withDashboardApiAuth(request, async (session) => {
+      const tenantId = session.session.currentTenantId!;
+      const result = await importLeadsFromCsv(tenantId, csvRows);
+      return NextResponse.json(result);
+    }, PERMISSION_SLUGS.LEADS_WRITE);
+  } catch (err) {
+    return dashboardApiAuthErrorResponse(err);
+  }
 }
