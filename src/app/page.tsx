@@ -9,9 +9,9 @@ import { SEO_APP_NAME } from "./seo";
 const CNPJ_FORMATTED = "35.050.841/0001-98";
 
 export const metadata: Metadata = {
-  title: "Observabilidade e gestao operacional",
+  title: "Vysen SaaS | Gestão comercial com IA",
   description:
-    "Centralize leads, conversas e funis em uma plataforma de observabilidade operacional com IA.",
+    "Centralize leads, conversas e funis em uma plataforma de gestão comercial com IA.",
   alternates: {
     canonical: "/",
   },
@@ -20,17 +20,17 @@ export const metadata: Metadata = {
     follow: true,
   },
   openGraph: {
-    title: `${SEO_APP_NAME} | Observabilidade e gestao operacional`,
+    title: `${SEO_APP_NAME} | Vysen SaaS | Gestão comercial com IA`,
     description:
-      "Centralize leads, conversas e funis em uma plataforma de observabilidade operacional com IA.",
+      "Centralize leads, conversas e funis em uma plataforma de gestão comercial com IA.",
     url: "/",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SEO_APP_NAME} | Observabilidade e gestao operacional`,
+    title: `${SEO_APP_NAME} | Vysen SaaS | Gestão comercial com IA`,
     description:
-      "Centralize leads, conversas e funis em uma plataforma de observabilidade operacional com IA.",
+      "Centralize leads, conversas e funis em uma plataforma de gestão comercial com IA.",
   },
 };
 
@@ -80,7 +80,7 @@ export default function HomePage() {
             </h1>
             
             <p className="text-brand-muted mb-8 leading-relaxed font-light sm:text-lg max-w-md">
-              Plataforma de inteligência para gestão de leads, observabilidade de conversas e atualização de status via agentes de IA. Centralize sua operação.
+              Plataforma de inteligência para gestão de leads, acompanhamento de conversas e atualização de status via agentes de IA. Centralize sua operação.
             </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-6 w-full sm:w-auto">

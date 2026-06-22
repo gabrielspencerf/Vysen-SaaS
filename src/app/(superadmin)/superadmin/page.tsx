@@ -130,7 +130,7 @@ export default async function SuperadminPage() {
             <h1 className="text-2xl font-bold text-brand-text">Superadmin</h1>
           </div>
           <p className="mt-2 text-brand-muted">
-            Operacao tecnica da plataforma: integracoes, observabilidade, dados e governanca.
+            Operacao tecnica da plataforma: integracoes, monitoramento, dados e governanca.
           </p>
         </div>
         <span className="rounded-full border border-brand-border px-2.5 py-1 text-xs text-brand-muted">

@@ -1,7 +1,7 @@
 export const SEO_APP_NAME = "Vysen";
 
 export const SEO_DEFAULT_DESCRIPTION =
-  "Plataforma para observabilidade e gestao operacional de leads, conversas e funis.";
+  "Plataforma de gestão de leads, conversas e funis com IA para equipes comerciais.";
 
 export const INDEXABLE_PUBLIC_ROUTES = ["/"] as const;
 

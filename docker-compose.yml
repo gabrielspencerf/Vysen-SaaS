@@ -36,7 +36,7 @@ services:
 
   app:
     build: .
-    image: ghcr.io/gabrielspencerf/observabilidade-saas:latest
+    image: ghcr.io/gabrielspencerf/vysen-saas:latest
     container_name: app-web
     env_file: .env
     environment:
@@ -51,7 +51,7 @@ services:
     restart: unless-stopped
 
   worker:
-    image: ghcr.io/gabrielspencerf/observabilidade-saas:latest
+    image: ghcr.io/gabrielspencerf/vysen-saas:latest
     container_name: app-worker
     env_file: .env
     environment:
