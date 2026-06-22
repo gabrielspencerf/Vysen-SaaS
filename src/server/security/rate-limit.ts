@@ -41,12 +41,23 @@ export interface RateLimitResult {
 export async function checkRateLimit(
   input: RateLimitInput
 ): Promise<RateLimitResult> {
+  // Em desenvolvimento local, permitimos fallback sem Redis para não bloquear
+  // login e fluxos básicos quando a infra assíncrona ainda não foi configurada.
+  if (!process.env.REDIS_URL && env.isDev) {
+    return {
+      allowed: true,
+      remaining: input.max,
+      retryAfterSeconds: input.windowSeconds,
+    };
+  }
+
   const ip = clientIpFromRequest(input.request);
   const resource = input.resourceKey ? hashKeyPart(input.resourceKey) : "any";
   const key = `ratelimit:${input.bucket}:${hashKeyPart(ip)}:${resource}`;
-  const redis = createRedisClient();
+  let redis: ReturnType<typeof createRedisClient> | null = null;
 
   try {
+    redis = createRedisClient();
     const count = await redis.incr(key);
     if (count === 1) {
       await redis.expire(key, input.windowSeconds);
@@ -59,7 +70,18 @@ export async function checkRateLimit(
       remaining,
       retryAfterSeconds,
     };
+  } catch (error) {
+    if (env.isDev) {
+      return {
+        allowed: true,
+        remaining: input.max,
+        retryAfterSeconds: input.windowSeconds,
+      };
+    }
+    throw error;
   } finally {
-    redis.quit();
+    if (redis) {
+      redis.quit();
+    }
   }
 }

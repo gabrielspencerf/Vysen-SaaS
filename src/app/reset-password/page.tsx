@@ -65,7 +65,11 @@ function ResetPasswordForm() {
         </p>
         <form onSubmit={handleSubmit} className="mt-4 space-y-3">
           <Input
+            id="reset-password"
+            name="password"
             type="password"
+            autoComplete={mode === "setup" ? "new-password" : "current-password"}
+            autoFocus
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Nova senha"
@@ -73,7 +77,10 @@ function ResetPasswordForm() {
             required
           />
           <Input
+            id="reset-confirm-password"
+            name="confirmPassword"
             type="password"
+            autoComplete="new-password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             placeholder="Confirmar nova senha"

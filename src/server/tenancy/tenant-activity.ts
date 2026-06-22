@@ -26,12 +26,23 @@ export interface RecordTenantActivityInput {
 export async function recordTenantActivity(
   input: RecordTenantActivityInput
 ): Promise<void> {
-  const [notifyEnabled, auditEnabled] = await Promise.all([
-    canUseTenantNotifications(input.tenantId),
-    canUseTenantAudit(input.tenantId, input.scope),
-  ]);
+  const notifyEnabled = await canUseTenantNotifications(input.tenantId);
 
   const tasks: Promise<void>[] = [];
+
+  // Audit log sempre grava — independe de feature flag do tenant.
+  // A flag só controla a UI de auditoria visível ao tenant.
+  tasks.push(
+    writeAuditLog({
+      tenantId: input.tenantId,
+      userId: input.actorUserId ?? null,
+      action: input.action,
+      resourceType: input.resourceType,
+      resourceId: input.resourceId ?? null,
+      oldValues: input.oldValues ?? null,
+      newValues: input.newValues ?? null,
+    })
+  );
 
   if (notifyEnabled) {
     tasks.push(
@@ -42,20 +53,6 @@ export async function recordTenantActivity(
         resourceType: input.resourceType,
         resourceId: input.resourceId ?? null,
         metadata: input.metadata ?? null,
-      })
-    );
-  }
-
-  if (auditEnabled) {
-    tasks.push(
-      writeAuditLog({
-        tenantId: input.tenantId,
-        userId: input.actorUserId ?? null,
-        action: input.action,
-        resourceType: input.resourceType,
-        resourceId: input.resourceId ?? null,
-        oldValues: input.oldValues ?? null,
-        newValues: input.newValues ?? null,
       })
     );
   }

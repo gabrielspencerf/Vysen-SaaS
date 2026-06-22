@@ -118,6 +118,7 @@ export interface QueueRedisClient {
   zadd(key: string, score: number, member: string): Promise<number | string>;
   zrem(key: string, ...members: string[]): Promise<number>;
   zrangebyscore(key: string, min: number | string, max: number | string): Promise<string[]>;
+  zscore(key: string, member: string): Promise<string | null>;
   llen(key: string): Promise<number>;
   set(
     key: string,
@@ -289,7 +290,6 @@ export async function reapStaleProcessing(
 ): Promise<number> {
   const threshold = nowMs - staleAfterMs;
   const stale = await redis.zrangebyscore(processingTrackerKey(queueName), 0, threshold);
-  if (stale.length === 0) return 0;
   let revived = 0;
   for (const payload of stale) {
     const removedFromProcessing = await redis.lrem(processingKey(queueName), 1, payload);
@@ -300,6 +300,22 @@ export async function reapStaleProcessing(
     }
     // Se removed=0, outro worker já tinha feito ack (ZREM ainda assim limpa lixo).
   }
+
+  // Fallback: varrer a processing list para jobs cujo ZADD no tracker falhou
+  // (crash entre BRPOPLPUSH e ZADD). Esses jobs não aparecem no ZSET mas ficam
+  // presos na lista. Adicionamos ao tracker com timestamp conservador (now - staleAfterMs - 1)
+  // para que o próximo tick do reaper os recolha.
+  const inProcessing = await redis.lrange(processingKey(queueName), 0, -1);
+  for (const payload of inProcessing) {
+    const trackerScore = await redis.zscore(processingTrackerKey(queueName), payload);
+    if (trackerScore === null) {
+      // Job presente na lista mas ausente do tracker — reinscrever com timestamp stale
+      await redis
+        .zadd(processingTrackerKey(queueName), nowMs - staleAfterMs - 1, payload)
+        .catch(() => {});
+    }
+  }
+
   return revived;
 }
 

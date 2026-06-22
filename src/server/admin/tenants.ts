@@ -8,6 +8,10 @@ import {
   mergeTenantFeatureFlagsInSettings,
   normalizeTenantFeatureFlags,
 } from "@/server/tenancy/tenant-features";
+import {
+  encryptSecretForStorage,
+  tryDecryptStoredSecret,
+} from "@/server/security/secret-storage";
 
 export interface TenantRow {
   id: string;
@@ -37,8 +41,38 @@ function normalizeTenantSettingsInput(
 ): Record<string, unknown> | null {
   if (settings === null) return null;
   const baseSettings: Record<string, unknown> = settings ? { ...settings } : {};
+
+  // Encrypt per-tenant OpenAI API key before persisting.
+  if (typeof baseSettings.openai_agent_api_key === "string") {
+    const raw = baseSettings.openai_agent_api_key.trim();
+    if (raw) {
+      baseSettings.openai_agent_api_key = encryptSecretForStorage(
+        raw,
+        "openai-agent-api-key"
+      );
+    } else {
+      delete baseSettings.openai_agent_api_key;
+    }
+  }
+
   const featureFlags = normalizeTenantFeatureFlags(baseSettings);
   return mergeTenantFeatureFlagsInSettings(baseSettings, featureFlags);
+}
+
+export function decryptTenantSettingsForResponse(
+  settings: Record<string, unknown> | null | undefined
+): Record<string, unknown> | null {
+  if (!settings) return settings ?? null;
+  const out: Record<string, unknown> = { ...settings };
+  if (typeof out.openai_agent_api_key === "string") {
+    const decrypted = tryDecryptStoredSecret(
+      out.openai_agent_api_key,
+      "openai-agent-api-key-response"
+    );
+    if (decrypted) out.openai_agent_api_key = decrypted;
+    else delete out.openai_agent_api_key;
+  }
+  return out;
 }
 
 export async function listTenants(): Promise<TenantRow[]> {

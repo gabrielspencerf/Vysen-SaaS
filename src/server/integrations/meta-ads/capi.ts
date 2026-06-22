@@ -73,7 +73,7 @@ export function buildCapiEventFromLead(lead: CapiLeadInput): Record<string, unkn
     event_name: eventName,
     event_time: eventTime,
     event_id: eventId,
-    action_source: "system",
+    action_source: "system_generated",
     user_data: userData,
     custom_data: customData,
   };

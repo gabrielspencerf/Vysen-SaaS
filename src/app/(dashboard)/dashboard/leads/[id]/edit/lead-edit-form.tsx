@@ -56,6 +56,8 @@ export function LeadEditForm({ leadId, defaultValues }: LeadEditFormProps) {
       }
       router.push(`/dashboard/leads/${leadId}`);
       router.refresh();
+    } catch {
+      setError("Erro de conexão. Tente novamente.");
     } finally {
       setSaving(false);
     }

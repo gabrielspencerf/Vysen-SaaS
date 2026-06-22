@@ -9,6 +9,7 @@ import { AuditLogSection } from "./audit-log-section";
 import { ProfileAvatarSection } from "./profile-avatar-section";
 import { SecuritySection } from "./security-section";
 import { Settings, Smartphone } from "lucide-react";
+import { useTheme } from "next-themes";
 
 interface ProfilePayload {
   id: string;
@@ -25,6 +26,7 @@ interface ProfilePayload {
 }
 
 export default function DashboardSettingsPage() {
+  const { setTheme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,6 +130,7 @@ export default function DashboardSettingsPage() {
 
   function applyTheme(nextTheme: "dark" | "light") {
     setThemeMode(nextTheme);
+    setTheme(nextTheme);
     document.documentElement.classList.toggle("dark", nextTheme === "dark");
     document.documentElement.classList.toggle("light", nextTheme === "light");
     document.documentElement.setAttribute("data-theme", nextTheme);

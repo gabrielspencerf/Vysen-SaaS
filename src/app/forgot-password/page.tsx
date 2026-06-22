@@ -43,7 +43,11 @@ export default function ForgotPasswordPage() {
         </p>
         <form onSubmit={handleSubmit} className="mt-4 space-y-3">
           <Input
+            id="forgot-email"
+            name="email"
             type="email"
+            autoComplete="email"
+            autoFocus
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="seu@email.com"

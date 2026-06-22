@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -5,6 +6,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -46,5 +48,10 @@ export const conversationMessages = pgTable(
     conversation_messages_tenant_sent_idx: index(
       "conversation_messages_tenant_sent_idx"
     ).on(t.tenantId, t.sentAt),
+    conversation_messages_dedup_idx: uniqueIndex(
+      "conversation_messages_dedup_idx"
+    )
+      .on(t.conversationId, t.externalId)
+      .where(sql`external_id IS NOT NULL`),
   })
 );

@@ -7,6 +7,7 @@ import {
   getMultipleGlobalConfig,
   setGlobalConfig,
 } from "@/server/config/global";
+import { tryDecryptStoredSecret } from "@/server/security/secret-storage";
 
 export const OPENAI_AGENT_CONFIG_KEYS = {
   enabled: "openai_agent_enabled",
@@ -143,7 +144,8 @@ function normalizeTenantSettings(
     openai_agent_followup_rules: followupRules,
     openai_agent_api_key:
       typeof value.openai_agent_api_key === "string"
-        ? value.openai_agent_api_key.trim()
+        ? (tryDecryptStoredSecret(value.openai_agent_api_key.trim(), "openai-agent-api-key") ??
+          undefined)
         : undefined,
   };
 }

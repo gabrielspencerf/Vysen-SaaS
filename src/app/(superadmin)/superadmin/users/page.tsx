@@ -6,20 +6,9 @@ import { ListTableHeader } from "@/components/layout/list-table-header";
 import { ListRowCard } from "@/components/layout/list-row-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui";
-import { agentDebugLog } from "@/server/debug/agent-debug-log";
 
 export default async function SuperadminUsersPage() {
   const users = await listUsers();
-  agentDebugLog({
-    runId: "admin-pages-styling",
-    hypothesisId: "H_ADMIN_USERS_1",
-    location: "src/app/(superadmin)/superadmin/users/page.tsx:SuperadminUsersPage",
-    message: "Render da listagem de usuarios no superadmin",
-    data: {
-      totalUsers: users.length,
-      activeUsers: users.filter((item) => item.isActive).length,
-    },
-  });
   return (
     <PageSection variant="plain" className="px-1 py-0 sm:px-2 md:px-2 md:pt-0 md:pb-0">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">

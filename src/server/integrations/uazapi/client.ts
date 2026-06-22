@@ -40,7 +40,7 @@ function resolveSecret(encrypted: string | null): string | null {
   try {
     return decryptSecret(encrypted);
   } catch {
-    return encrypted;
+    return null;
   }
 }
 

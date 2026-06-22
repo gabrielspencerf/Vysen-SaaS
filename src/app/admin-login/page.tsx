@@ -59,6 +59,10 @@ export default function AdminLoginPage() {
         router.push("/superadmin");
         router.refresh();
       } else {
+        // O endpoint /api/auth/login autentica qualquer usuário válido.
+        // Se não for super_admin, limpamos imediatamente a sessão criada
+        // para manter o contrato funcional da tela /admin-login.
+        await fetch("/api/auth/logout", { method: "POST" });
         setError("Acesso restrito a administradores. Use credenciais de super admin.");
       }
     } catch {
@@ -119,8 +123,10 @@ export default function AdminLoginPage() {
                 </div>
                 <Input
                   id="admin-email"
+                  name="email"
                   type="email"
                   autoComplete="email"
+                  autoFocus
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -142,6 +148,7 @@ export default function AdminLoginPage() {
                 </div>
                 <Input
                   id="admin-password"
+                  name="password"
                   type="password"
                   autoComplete="current-password"
                   value={password}

@@ -121,8 +121,10 @@ function LoginForm() {
                 </div>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   autoComplete="email"
+                  autoFocus
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -144,6 +146,7 @@ function LoginForm() {
                 </div>
                 <Input
                   id="password"
+                  name="password"
                   type="password"
                   autoComplete="current-password"
                   value={password}

@@ -136,7 +136,12 @@ async function processWhatsappCloudRawInner(
   const [raw] = await db
     .select()
     .from(whatsappCloudWebhookEvents)
-    .where(eq(whatsappCloudWebhookEvents.id, rawEventId))
+    .where(
+      and(
+        eq(whatsappCloudWebhookEvents.id, rawEventId),
+        eq(whatsappCloudWebhookEvents.tenantId, tenantId)
+      )
+    )
     .limit(1);
 
   if (!raw) return { error: `Raw event not found: ${rawEventId}` };
@@ -253,32 +258,27 @@ async function processWhatsappCloudRawInner(
         conversationId = inserted.id;
       }
 
-      const [existingMsg] = await db
-        .select({ id: conversationMessages.id })
-        .from(conversationMessages)
-        .where(
-          and(
-            eq(conversationMessages.conversationId, conversationId),
-            eq(conversationMessages.externalId, messageId)
-          )
-        )
-        .limit(1);
-
-      if (!existingMsg) {
+      {
         const { contentType, contentText } = extractWcMessageParts(msg);
-        await db.insert(conversationMessages).values({
-          tenantId,
-          conversationId,
-          externalId: messageId,
-          direction,
-          sentByBot: false,
-          contentType,
-          contentText,
-          payload: msg,
-          sentAt,
-        });
+        const [insertedMsg] = await db
+          .insert(conversationMessages)
+          .values({
+            tenantId,
+            conversationId,
+            externalId: messageId,
+            direction,
+            sentByBot: false,
+            contentType,
+            contentText,
+            payload: msg,
+            sentAt,
+          })
+          .onConflictDoNothing()
+          .returning({ id: conversationMessages.id });
 
-        await enqueueConversationClassification({ tenantId, conversationId });
+        if (insertedMsg) {
+          await enqueueConversationClassification({ tenantId, conversationId });
+        }
       }
 
       handledAnyMessage = true;

@@ -4,7 +4,11 @@
  */
 import { NextRequest } from "next/server";
 import { requireAdmin } from "@/server/admin/require-admin";
-import { getTenantById, updateTenant } from "@/server/admin/tenants";
+import {
+  getTenantById,
+  updateTenant,
+  decryptTenantSettingsForResponse,
+} from "@/server/admin/tenants";
 import { adminApiAuthErrorResponse } from "@/server/admin/api-route-errors";
 import { apiError, apiOk } from "@/server/http/api-contract";
 
@@ -29,7 +33,10 @@ export async function GET(
   if (!tenant) {
     return apiError("tenant_not_found", "Tenant não encontrado", { status: 404 });
   }
-  return apiOk(tenant);
+  return apiOk({
+    ...tenant,
+    settings: decryptTenantSettingsForResponse(tenant.settings),
+  });
 }
 
 export async function PATCH(

@@ -18,6 +18,7 @@ export function sanitizeInternalRedirect(
   if (value.startsWith("//")) return fallback;
   if (value.includes("://")) return fallback;
   if (value.includes("..")) return fallback;
+  if (value.includes("\\")) return fallback;
   if (options?.relaxed) {
     return value;
   }

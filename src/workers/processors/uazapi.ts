@@ -140,7 +140,12 @@ async function processUazapiRawInner(
   const [raw] = await db
     .select()
     .from(uazapiWebhookEvents)
-    .where(eq(uazapiWebhookEvents.id, rawEventId))
+    .where(
+      and(
+        eq(uazapiWebhookEvents.id, rawEventId),
+        eq(uazapiWebhookEvents.tenantId, tenantId)
+      )
+    )
     .limit(1);
 
   if (!raw) {
@@ -236,48 +241,43 @@ async function processUazapiRawInner(
     conversationId = inserted.id;
   }
 
-  const [existingMsg] = await db
-    .select({ id: conversationMessages.id })
-    .from(conversationMessages)
-    .where(
-      and(
-        eq(conversationMessages.conversationId, conversationId),
-        eq(conversationMessages.externalId, messageId)
-      )
-    )
-    .limit(1);
+  {
+    const [insertedMsg] = await db
+      .insert(conversationMessages)
+      .values({
+        tenantId,
+        conversationId,
+        externalId: messageId,
+        direction: fromMe ? "out" : "in",
+        sentByBot,
+        contentType,
+        contentText: contentText,
+        payload: payload,
+        sentAt,
+      })
+      .onConflictDoNothing()
+      .returning({ id: conversationMessages.id });
 
-  if (!existingMsg) {
-    const [insertedMsg] = await db.insert(conversationMessages).values({
-      tenantId,
-      conversationId,
-      externalId: messageId,
-      direction: fromMe ? "out" : "in",
-      sentByBot,
-      contentType,
-      contentText: contentText,
-      payload: payload,
-      sentAt,
-    }).returning({ id: conversationMessages.id });
-
-    if (insertedMsg && contentType === "image") {
-      const description = await tryDescribeUazapiImage(payload);
-      if (description) {
-        await db
-          .update(conversationMessages)
-          .set({
-            contentText: contentText?.trim()
-              ? `${contentText.trim()}\n\n— Descrição: ${description}`
-              : description,
-          })
-          .where(eq(conversationMessages.id, insertedMsg.id));
+    if (insertedMsg) {
+      if (contentType === "image") {
+        const description = await tryDescribeUazapiImage(payload);
+        if (description) {
+          await db
+            .update(conversationMessages)
+            .set({
+              contentText: contentText?.trim()
+                ? `${contentText.trim()}\n\n— Descrição: ${description}`
+                : description,
+            })
+            .where(eq(conversationMessages.id, insertedMsg.id));
+        }
       }
-    }
 
-    await enqueueConversationClassification({
-      tenantId,
-      conversationId,
-    });
+      await enqueueConversationClassification({
+        tenantId,
+        conversationId,
+      });
+    }
   }
 
   await db

@@ -13,9 +13,8 @@ export async function enqueueDueFollowupsForTenant(tenantId: string): Promise<vo
   const redis = createRedisClient();
   try {
     const lockKey = FOLLOWUP_DUE_LOCK_KEY(tenantId);
-    const locked = await redis.setnx(lockKey, "1");
+    const locked = await redis.set(lockKey, "1", "EX", 90, "NX");
     if (!locked) return;
-    await redis.expire(lockKey, 90);
 
     await enqueue(redis, {
       type: "process_due_followups_tenant",

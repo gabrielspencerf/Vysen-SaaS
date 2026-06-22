@@ -235,7 +235,12 @@ async function processChatwootRawInner(
   const [raw] = await db
     .select()
     .from(chatwootWebhookEvents)
-    .where(eq(chatwootWebhookEvents.id, rawEventId))
+    .where(
+      and(
+        eq(chatwootWebhookEvents.id, rawEventId),
+        eq(chatwootWebhookEvents.tenantId, tenantId)
+      )
+    )
     .limit(1);
 
   if (!raw) return { error: `Raw event not found: ${rawEventId}` };
@@ -346,19 +351,9 @@ async function processChatwootRawInner(
     msgSlice.created_at ?? msgSlice.updated_at ?? payload.created_at
   );
 
-  const [existingMsg] = await db
-    .select({ id: conversationMessages.id })
-    .from(conversationMessages)
-    .where(
-      and(
-        eq(conversationMessages.conversationId, conversationId),
-        eq(conversationMessages.externalId, messageId)
-      )
-    )
-    .limit(1);
-
-  if (!existingMsg) {
-    await db.insert(conversationMessages).values({
+  const [insertedMsg] = await db
+    .insert(conversationMessages)
+    .values({
       tenantId,
       conversationId,
       externalId: messageId,
@@ -368,8 +363,11 @@ async function processChatwootRawInner(
       contentText,
       payload: msgSlice,
       sentAt,
-    });
+    })
+    .onConflictDoNothing()
+    .returning({ id: conversationMessages.id });
 
+  if (insertedMsg) {
     await enqueueConversationClassification({ tenantId, conversationId });
   }
 

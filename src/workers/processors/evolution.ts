@@ -141,7 +141,12 @@ async function processEvolutionRawInner(
   const [raw] = await db
     .select()
     .from(evolutionWebhookEvents)
-    .where(eq(evolutionWebhookEvents.id, rawEventId))
+    .where(
+      and(
+        eq(evolutionWebhookEvents.id, rawEventId),
+        eq(evolutionWebhookEvents.tenantId, tenantId)
+      )
+    )
     .limit(1);
 
   if (!raw) {
@@ -239,18 +244,7 @@ async function processEvolutionRawInner(
     conversationId = inserted.id;
   }
 
-  const [existingMsg] = await db
-    .select({ id: conversationMessages.id })
-    .from(conversationMessages)
-    .where(
-      and(
-        eq(conversationMessages.conversationId, conversationId),
-        eq(conversationMessages.externalId, messageId)
-      )
-    )
-    .limit(1);
-
-  if (!existingMsg) {
+  {
     const [insertedMsg] = await db
       .insert(conversationMessages)
       .values({
@@ -264,6 +258,7 @@ async function processEvolutionRawInner(
         payload: payload,
         sentAt,
       })
+      .onConflictDoNothing()
       .returning({ id: conversationMessages.id });
 
     if (insertedMsg && contentType === "audio") {
