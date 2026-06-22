@@ -34,7 +34,7 @@ function main(): void {
   const dashboardChat = readRequired("src/app/api/dashboard/vysen/chat/route.ts");
   assertIncludes(
     dashboardChat,
-    "requireDashboardApiAuth",
+    "withDashboardApiAuth",
     "API de dashboard deve usar guard de dashboard auth"
   );
 
