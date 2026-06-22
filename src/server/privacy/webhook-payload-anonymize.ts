@@ -37,7 +37,7 @@ function anonymizeNode(key: string, value: unknown, depth: number): unknown {
     return PII_SENTINEL;
   }
   if (Array.isArray(value)) {
-    return value.map((item, i) =>
+    return value.map((item) =>
       typeof item === "object" && item !== null
         ? anonymizeUnknown(item, depth + 1)
         : item

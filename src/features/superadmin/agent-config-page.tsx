@@ -36,7 +36,7 @@ export function SuperadminAgentConfigPage() {
   const [enabled, setEnabled] = useState(true);
   const [model, setModel] = useState("gpt-4o-mini");
   const [systemPrompt, setSystemPrompt] = useState("");
-  const [followupRules, setFollowupRules] = useState<FollowupRule[]>([DEFAULT_RULE]);
+  const [, setFollowupRules] = useState<FollowupRule[]>([DEFAULT_RULE]);
   const [followupRulesRaw, setFollowupRulesRaw] = useState(
     JSON.stringify([DEFAULT_RULE], null, 2)
   );

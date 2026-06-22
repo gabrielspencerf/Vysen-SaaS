@@ -236,16 +236,6 @@ function appendStatusParamsVariants(
   return Array.from(variants);
 }
 
-function sanitizeEndpointForLog(endpoint: string): string {
-  try {
-    const parsed = new URL(endpoint);
-    if (parsed.searchParams.has("token")) parsed.searchParams.set("token", "***");
-    if (parsed.searchParams.has("admintoken")) parsed.searchParams.set("admintoken", "***");
-    return parsed.toString();
-  } catch {
-    return endpoint;
-  }
-}
 
 function endpointForDetails(endpoint: string): string {
   try {

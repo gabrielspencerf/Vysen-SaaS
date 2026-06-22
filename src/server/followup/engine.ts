@@ -1,4 +1,4 @@
-import { and, eq, lte, or } from "drizzle-orm";
+import { and, eq, lte } from "drizzle-orm";
 import { followupTasks, leads } from "@/db/schema";
 import { getDb } from "@/server/db";
 import { getResolvedOpenAIAgentConfig } from "@/server/config/openai-agent";

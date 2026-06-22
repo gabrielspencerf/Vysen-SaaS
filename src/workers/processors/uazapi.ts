@@ -114,7 +114,7 @@ export async function processUazapiRaw(
   job: JobProcessUazapiRaw
 ): Promise<{ ok: true } | { error: string }> {
   const db = getDb();
-  const { rawEventId, tenantId, uazapiInstanceId } = job;
+  const { rawEventId } = job;
 
   try {
     return await processUazapiRawInner(db, job);

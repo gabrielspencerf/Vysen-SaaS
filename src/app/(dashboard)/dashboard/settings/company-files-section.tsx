@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card, CardContent } from "@/components/ui";
+import { Card, CardContent } from "@/components/ui";
 import { Upload, Trash2 } from "lucide-react";
 
 type Asset = {

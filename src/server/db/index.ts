@@ -39,7 +39,6 @@ function parsePositiveMs(envKey: string, fallback: number): number {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var __dbRoot: AppDatabase | undefined;
 }
 

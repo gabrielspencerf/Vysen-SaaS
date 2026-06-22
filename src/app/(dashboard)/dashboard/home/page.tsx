@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users, MessageSquare, BarChart3, TrendingUp, MousePointerClick, LayoutDashboard } from "lucide-react";
+import { Users, MessageSquare, BarChart3, TrendingUp, LayoutDashboard } from "lucide-react";
 import {
   getDashboardTenantContext,
   getAnalyticsSummaryForTenant,

@@ -9,10 +9,6 @@ import {
   leads,
   conversations,
   googleAdsAccounts,
-  campaignSnapshots,
-  integrations,
-  evolutionInstances,
-  uazapiInstances,
 } from "@/db/schema";
 import { listLeadsForTenant } from "./leads";
 import { listConversationsForTenant } from "./conversations";

@@ -2,7 +2,6 @@ import { notifyTenantUsers } from "@/server/notifications/internal";
 import { writeAuditLog } from "@/server/audit/log";
 import type { TenantAuditScope } from "./tenant-features";
 import {
-  canUseTenantAudit,
   canUseTenantNotifications,
 } from "./tenant-features";
 

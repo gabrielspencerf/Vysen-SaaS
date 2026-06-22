@@ -1,4 +1,4 @@
-import { boolean, jsonb, pgTable, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, pgTable, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { tenants } from "../auth/tenants";
 
 export const funnels = pgTable("funnels", {

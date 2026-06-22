@@ -4,7 +4,7 @@
  * Paridade com Evolution. Ver docs/EVOLUTION_WEBHOOK_DEBUG.md (fluxo análogo).
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import type { UazapiWebhookContext } from "@/server/integrations/uazapi";
 import { parseUazapiWebhookBody } from "@/server/integrations/uazapi/parse";
 import { ingestUazapiWebhook } from "@/server/integrations/uazapi/ingest";

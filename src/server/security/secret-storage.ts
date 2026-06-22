@@ -15,7 +15,7 @@ function isEncryptionConfigError(error: unknown): boolean {
  * Em desenvolvimento/teste, permite fallback para plain-text quando a chave de
  * criptografia não está configurada. Em produção, mantém fail-fast por segurança.
  */
-export function encryptSecretForStorage(secret: string, source: string): string {
+export function encryptSecretForStorage(secret: string, _source: string): string {
   try {
     return encryptSecret(secret);
   } catch (error) {

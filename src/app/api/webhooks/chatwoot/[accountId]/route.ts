@@ -3,7 +3,7 @@
  * Recebe webhook Chatwoot; valida HMAC-SHA256; persiste raw event; enfileira job.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import type { ChatwootWebhookContext } from "@/server/integrations/chatwoot";
 import { parseChatwootWebhookBody, ingestChatwootWebhook } from "@/server/integrations/chatwoot";
 import { checkRateLimit } from "@/server/security/rate-limit";

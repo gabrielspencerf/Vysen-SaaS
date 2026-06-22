@@ -2,7 +2,7 @@
  * PageSpeed: URL da landing por tenant e histórico de resultados por data/dispositivo.
  */
 
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { getDb } from "@/server/db";
 import { tenants, pagespeedResults } from "@/db/schema";
 

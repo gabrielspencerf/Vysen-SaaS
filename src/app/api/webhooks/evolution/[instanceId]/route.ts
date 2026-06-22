@@ -4,7 +4,7 @@
  * Não exige autenticação de usuário; identificação por URL/token. Ver docs/BASE2_ETAPA1.md.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import type { EvolutionWebhookContext } from "@/server/integrations/evolution";
 import { parseEvolutionWebhookBody, ingestEvolutionWebhook } from "@/server/integrations/evolution";
 import { checkRateLimit } from "@/server/security/rate-limit";

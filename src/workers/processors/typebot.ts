@@ -83,7 +83,7 @@ export async function processTypebotRaw(
   job: JobProcessTypebotRaw
 ): Promise<{ ok: true } | { error: string }> {
   const db = getDb();
-  const { rawEventId, tenantId, typebotBotId } = job;
+  const { rawEventId } = job;
 
   try {
     return await processTypebotRawInner(db, job);

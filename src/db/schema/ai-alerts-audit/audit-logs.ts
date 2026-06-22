@@ -1,4 +1,4 @@
-import { index, jsonb, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { index, jsonb, pgTable, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { tenants } from "../auth/tenants";
 import { users } from "../auth/users";
 import { auditActionEnum } from "../../enums";

@@ -4,7 +4,7 @@
  * Não exige autenticação de usuário; identificação por URL/secret. Ver docs/BASE2_ETAPA1.md.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import type { TypebotWebhookContext } from "@/server/integrations/typebot";
 import { parseTypebotWebhookBody, ingestTypebotWebhook } from "@/server/integrations/typebot";
 import { checkRateLimit } from "@/server/security/rate-limit";

@@ -1,4 +1,3 @@
-import { eq } from "drizzle-orm";
 import { getDb } from "@/server/db";
 import { evolutionInstances } from "@/db/schema";
 import { getEvolutionInstanceSecret } from "./credentials";

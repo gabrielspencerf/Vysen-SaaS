@@ -115,7 +115,7 @@ export async function processEvolutionRaw(
   job: JobProcessEvolutionRaw
 ): Promise<{ ok: true } | { error: string }> {
   const db = getDb();
-  const { rawEventId, tenantId, evolutionInstanceId } = job;
+  const { rawEventId } = job;
 
   try {
     return await processEvolutionRawInner(db, job);

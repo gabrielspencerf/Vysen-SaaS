@@ -13,7 +13,6 @@ import { DashboardPageHeader } from "@/components/layout";
 import { formatDateTime } from "@/lib/i18n/date";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui";
-import { BarChart3 } from "lucide-react";
 import { ProviderBrandIcon } from "@/components/provider-brand-icon";
 import { AdsSpendChart } from "@/components/dashboard-charts-lazy";
 import { env } from "@/config/env";

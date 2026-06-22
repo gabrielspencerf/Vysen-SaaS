@@ -5,7 +5,7 @@
 
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "@/server/db";
-import { funnels, funnelSteps, leads } from "@/db/schema";
+import { funnels, funnelSteps } from "@/db/schema";
 
 export interface FunnelStepVolume {
   stepId: string;

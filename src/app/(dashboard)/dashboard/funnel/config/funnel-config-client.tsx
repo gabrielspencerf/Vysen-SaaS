@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Button, Input, Card, CardContent } from "@/components/ui";
 import { CheckCircle2, Filter, Plus, Trash2, GripVertical, Star, TriangleAlert } from "lucide-react";
 

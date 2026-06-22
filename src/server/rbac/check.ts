@@ -4,7 +4,7 @@
  */
 import { eq, and } from "drizzle-orm";
 import { getDb } from "@/server/db";
-import { roles, permissions, rolePermissions, memberships } from "@/db/schema";
+import { roles, permissions, rolePermissions } from "@/db/schema";
 import { isSuperAdmin, getCurrentMembership } from "@/server/tenancy/membership";
 import type { PermissionSlug, RoleSlug } from "./permissions";
 import { GLOBAL_PERMISSION } from "./permissions";

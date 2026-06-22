@@ -9,7 +9,6 @@ import { PageSection, ListTableHeader, ListRowCard } from "@/components/layout";
 import { DashboardPageHeader } from "@/components/layout";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui";
-import { Megaphone } from "lucide-react";
 import { env } from "@/config/env";
 import { getCsrfCookieName } from "@/server/security/csrf";
 import { MetaCapiPanel, MetaPixelForm } from "./meta-ads-actions-client";

@@ -13,7 +13,6 @@ import { DashboardNotificationBell } from "@/components/dashboard-notification-b
 import { SidebarNavSections } from "@/components/sidebar-nav-sections";
 import { SidebarInsightsCarousel } from "@/components/sidebar-insights-carousel";
 import { dashboardNavSections } from "@/components/sidebar-navigation";
-import { Button } from "@/components/ui";
 import type { SidebarInsightsPayload } from "@/types/sidebar-insights";
 
 interface DashboardSidebarProps {
