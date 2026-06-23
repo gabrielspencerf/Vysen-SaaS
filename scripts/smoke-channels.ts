@@ -807,7 +807,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
+main().then(() => process.exit(0)).catch((err) => {
   console.error("[smoke:channels] falhou:", err);
   process.exit(1);
 });
