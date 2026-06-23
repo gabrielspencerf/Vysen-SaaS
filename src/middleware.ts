@@ -37,6 +37,10 @@ function hasSessionCookie(request: NextRequest): boolean {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  if (pathname === "/") {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
   if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
