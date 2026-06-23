@@ -1,139 +1,159 @@
-# Observabilidade SaaS (Vysen)
+# Vysen SaaS
 
-Plataforma SaaS multi-tenant para operacao comercial e marketing, com foco em:
+**Plataforma comercial multi-tenant com IA para equipes de vendas e marketing.**
 
-- observabilidade de leads e conversas;
-- funil de vendas e analise de gargalos;
-- integracoes com Google Ads, Meta Ads, Clarity, Typebot, Evolution e UAZAPI;
-- apoio a decisao com Vysen Copilot.
+Centralize leads, conversas, funil e integrações de mídia paga em uma única plataforma — com copiloto de IA, automação de follow-up e análise em tempo real.
 
-Este repositorio contem app web (Next.js), APIs internas, worker assicrono e camada de dados (Drizzle + PostgreSQL).
+---
 
-## Stack principal
+## O que a Vysen resolve
 
-- Next.js 15 + React 19 + TypeScript
-- Tailwind CSS
-- PostgreSQL + Drizzle ORM
-- Redis (filas e jobs assincronos com implementacao interna em `src/workers/queue`)
-- Autenticacao por sessao (cookie opaco)
+| Problema | Como a Vysen resolve |
+|---|---|
+| Leads dispersos em vários canais | CRM unificado com importação CSV e webhooks de Typebot/WhatsApp |
+| Perda de contexto nas conversas | Inbox centralizado com histórico e mídia (áudio/imagem) |
+| Funil sem visibilidade | Kanban + etapas configuráveis + relatório de gargalos |
+| Decisão lenta sem dados | Vysen Copilot: IA consultiva sobre a operação em tempo real |
+| Campanhas sem atribuição | Integração nativa Google Ads + Meta Ads com CAPI offline |
+| Equipe sem controle de acesso | RBAC por tenant: roles, permissões, auditoria por ação |
 
-## Funcionalidades principais
+---
 
-- Multi-tenancy com RBAC (tenant, usuario, membership, permissoes)
-- Dashboard com leads, conversas, funil e canais
-- Area admin para tenants, usuarios e integracoes
-- Ingestao de webhooks e processamento assincrono via worker
-- Auditoria e notificacoes por tenant (com feature flags)
-- Copilot Vysen com fallback de modelo e telemetria
+## Módulos principais
 
-## Estrutura do projeto
+### CRM e funil
+- Leads com status, funil, origem, produtos e histórico de eventos
+- Funil configurável (etapas, ordem, nome) com kanban e relatório de conversão
+- Contatos linkados a leads com importação e exportação CSV
+- Oportunidades com valor e negociação
 
-```txt
-src/
-  app/           # rotas UI e API (App Router)
-  components/    # componentes reutilizaveis
-  server/        # regras de negocio, auth, integracoes, seguranca
-  db/            # schema, migrations e seeds
-  workers/       # consumidores de fila e jobs
-docs/            # documentacao tecnica e operacional
-scripts/         # scripts utilitarios de ambiente/banco
+### Conversas e canais
+- Inbox unificado: WhatsApp (Evolution API, UAZAPI, WhatsApp Cloud), Chatwoot
+- Mensagens com áudio (transcrição via Whisper), imagens (descrição via Vision)
+- Classificação automática de conversa por IA
+- Configuração de instâncias por tenant com QR Code e status de conexão
+
+### Vysen Copilot
+- IA analítica sobre a operação: leads, funil, conversas, campanhas
+- Memória de conversa por thread com resumo automático
+- Contextos selecionáveis (geral, funil, Google Ads, Meta Ads, conversas)
+- Modo rápido e modo thinking (raciocínio estendido)
+
+### Integrações de mídia paga
+- **Google Ads**: OAuth, sync de campanhas, conversões offline (GCLID)
+- **Meta Ads**: OAuth, sync de insights, CAPI server-side, Pixel
+- **Microsoft Clarity**: conexão e sync por tenant
+
+### Follow-up automatizado
+- Tarefas de follow-up agendadas por lead
+- Motor de disparo configurável (intervalo, máximo de tentativas)
+- Integração com agente de IA para geração de mensagem contextual
+
+### Infraestrutura multi-tenant
+- Isolamento por RLS (PostgreSQL Row-Level Security) com `SET LOCAL` por transação
+- RBAC completo: tenant → membership → role → permissions
+- Auditoria de ações por tenant (feature flag por plano)
+- Notificações internas por tenant com histórico
+- SMTP próprio por tenant para envio de e-mails
+
+---
+
+## Stack técnica
+
+| Camada | Tecnologia |
+|---|---|
+| Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS |
+| Backend | Next.js App Router (API Routes), Node.js 20+ |
+| Banco de dados | PostgreSQL 16 + pgvector + Drizzle ORM |
+| Cache/Filas | Redis + worker assíncrono próprio |
+| IA | OpenAI (GPT-4o, Whisper, Vision) |
+| Auth | Sessão por cookie opaco + RBAC |
+| Segurança | SSRF guard, HMAC webhooks, AES-256-GCM, rate limit, dedup |
+| Deploy | Docker + GHCR (`ghcr.io/gabrielspencerf/vysen-saas`) |
+
+---
+
+## Estrutura do repositório
+
 ```
+src/
+  app/              # UI e API Routes (Next.js App Router)
+    (dashboard)/    # área do usuário tenant
+    (superadmin)/   # área administrativa global
+    api/            # endpoints REST por domínio
+  components/       # componentes de UI reutilizáveis
+  features/         # lógica de features complexas (chat, kanban)
+  server/           # domínio de negócio, auth, integrações, segurança
+  db/               # schema Drizzle, migrations, seeds
+  workers/          # consumidores de fila assíncrona
+docs/               # documentação técnica e operacional
+scripts/            # utilitários de banco, smoke tests, deploy
+```
+
+---
 
 ## Como rodar localmente
 
-### 1) Pre-requisitos
+### Pré-requisitos
 
 - Node.js >= 20
-- PostgreSQL
-- Redis (obrigatorio para worker e integracoes assincronas)
+- PostgreSQL 16
+- Redis
 
-### 2) Instalar dependencias
+### Setup
 
 ```bash
+# 1. Instalar dependências
 npm install
-```
 
-### 3) Configurar ambiente
+# 2. Configurar ambiente
+cp .env.example .env.local
+# Preencher DATABASE_URL, SESSION_SECRET, REDIS_URL
 
-Copie `.env.example` para `.env` (ou `.env.local`) e preencha no minimo:
-
-- `DATABASE_URL`
-- `SESSION_SECRET`
-
-Para worker/integracoes, configure tambem:
-
-- `REDIS_URL`
-
-### 4) Preparar banco
-
-```bash
+# 3. Banco de dados
 npm run db:migrate
 npm run db:seed
-```
 
-### 5) Subir aplicacao
+# 4. App
+npm run dev          # http://localhost:3000
 
-```bash
-npm run dev
-```
-
-App local: `http://localhost:3000`
-
-## Runtime da Vysen
-
-O copiloto da Vysen segue rodando com backend local da aplicação.
-Também existe uma camada de abstração preparada para integração futura com Agno em `src/server/vysen/runtime`.
-
-Variáveis planejadas:
-
-- `VYSEN_AGNO_ENABLED`
-- `VYSEN_AGNO_SERVICE_URL`
-- `VYSEN_AGNO_SESSION_TABLE`
-- `VYSEN_AGNO_MEMORY_TABLE`
-
-### 6) (Opcional) Subir worker em paralelo
-
-```bash
+# 5. Worker (em paralelo, opcional)
 npm run worker:dev
 ```
 
-## Scripts uteis
+### Deploy com Docker
 
-- `npm run dev` - sobe app em modo desenvolvimento
-- `npm run build` - build de producao
-- `npm run start` - start de producao
-- `npm run lint` - lint do projeto
-- `npm run typecheck` - checagem TypeScript
-- `npm run smoke:web` - smoke estrutural de rotas e boundary web
-- `npm run smoke:api` - smoke estrutural de auth/tenant/webhooks
-- `npm run smoke:channels` - smoke local de Chatwoot/WhatsApp Cloud (raw event -> processor -> conversations/messages)
-- `npm run smoke:worker` - smoke estrutural de filas/readiness/runner
-- `npm run ci:verify` - pipeline minimo local (lint + typecheck + build + smokes)
-- `npm run db:migrate` - aplica migrations
-- `npm run db:seed` - popula dados iniciais
-- `npm run db:studio` - abre Drizzle Studio
+```bash
+docker compose up -d
+# ou usar a imagem pré-compilada: ghcr.io/gabrielspencerf/vysen-saas:latest
+```
 
-## Valor para o negocio
+---
 
-- Centralize operacao, marketing e vendas em uma unica visao.
-- Transforme dados dispersos em prioridades claras para o time.
-- Ganhe velocidade na tomada de decisao com apoio do Vysen Copilot.
-- Melhore previsibilidade comercial com funil, sinais e indicadores em tempo real.
+## Scripts
 
-## Documentacao recomendada
+| Comando | Descrição |
+|---|---|
+| `npm run dev` | Desenvolvimento local |
+| `npm run build` | Build de produção |
+| `npm run ci:verify` | Pipeline completo: lint + typecheck + testes + build + smokes |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript sem emit |
+| `npm run test` | Testes de segurança (Node test runner) |
+| `npm run smoke:api` | Smoke estrutural de auth/tenant/webhooks |
+| `npm run smoke:web` | Smoke estrutural de rotas e boundary web |
+| `npm run smoke:worker` | Smoke de filas e readiness |
+| `npm run smoke:channels` | Smoke de ingestão Chatwoot/WhatsApp Cloud |
+| `npm run db:migrate` | Aplica migrations |
+| `npm run db:seed` | Dados iniciais |
+| `npm run db:studio` | Drizzle Studio |
 
-- `docs/GETTING_STARTED.md` - bootstrap detalhado
-- `docs/CONFIG_CREDENTIALS.md` - mapa de credenciais e variaveis
-- `docs/SECURITY_ENDPOINTS_MAP.md` - superficie de endpoints criticos
-- `docs/VYSEN_COPILOT.md` - modelos, fallback e limites do copilot
-- `docs/AGNO_VYSEN_ARQUITETURA_2026-04.md` - desenho de sessão, memória e workflow com Agno
-- `docs/PLANO_IMPLEMENTACAO_AGNO_VYSEN_2026-04.md` - rollout incremental dessa infraestrutura
-- `docs/REVISAO_COMPLETA_APP_2026-03.md` - auditoria tecnica consolidada
+---
 
-## Status
+## Documentação técnica
 
-Repositorio em evolucao continua com foco em:
-
-- consistencia de UX dashboard/admin;
-- robustez de seguranca por ambiente;
-- escalabilidade de filas, ingestao e processamento de dados.
+- [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) — bootstrap detalhado
+- [`docs/CONFIG_CREDENTIALS.md`](docs/CONFIG_CREDENTIALS.md) — mapa de credenciais e variáveis
+- [`docs/PADRAO_DESENVOLVIMENTO.md`](docs/PADRAO_DESENVOLVIMENTO.md) — padrões de código e arquitetura
+- [`docs/DEPLOY_VPS.md`](docs/DEPLOY_VPS.md) — deploy em VPS com Docker Swarm
+- [`docs/REVISAO_GERAL_2026-06.md`](docs/REVISAO_GERAL_2026-06.md) — revisão técnica mais recente
